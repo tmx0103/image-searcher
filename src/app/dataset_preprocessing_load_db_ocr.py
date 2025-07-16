@@ -11,9 +11,10 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.ocr.paddle_ocr_util import PaddleOCRUtil
-from app.utils import sha256_util
-from models.img_vector import ImgVectorMapper
+from src.app.log.logger import logger
+from src.app.ocr.paddle_ocr_util import PaddleOCRUtil
+from src.app.utils import sha256_util
+from src.app.db.mapper.img_vector_mapper import ImgVectorMapper
 
 if __name__ == "__main__":
     # 载入数据库
@@ -27,10 +28,10 @@ if __name__ == "__main__":
         ocr_util = PaddleOCRUtil("resources/ai-models/PP-OCRv5_server_det_infer",
                                  "resources/ai-models/PP-OCRv5_server_rec_infer")
 
-        for file_dir, dirs, file_names in os.walk(os.path.join("resources", "dataset")):
+        for file_dir, dirs, file_names in os.walk(os.path.join("../app/resources", "dataset")):
             for file_name in file_names:
                 file_relative_path = os.path.join(file_dir, file_name)
-                print(f"处理：{file_relative_path}")
+                logger.info(f"处理：{file_relative_path}")
 
                 # 计算当前文件的sha256
                 file_sha256 = sha256_util.sha256_file(file_relative_path)
@@ -42,4 +43,4 @@ if __name__ == "__main__":
                         # 将ocr_texts拼接为ocr_text，以逗号分隔
                         ocr_text = ",".join(ocr_texts)
                         img_vector_mapper.update_ocr_text_by_file_sha256(file_sha256, ocr_text)
-                        print(f"写表成功:{file_relative_path}，文本：{ocr_text}")
+                        logger.info(f"写表成功:{file_relative_path}，文本：{ocr_text}")
