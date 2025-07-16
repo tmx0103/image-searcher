@@ -43,7 +43,7 @@ alter table dev.tb_img_vector
     - 执行dataset_preprocessing_rename.py，将dataset目录中的图片统一命名；
     - 执行dataset_preprocessing_load_db.py，为dataset目录中的图片建立向量索引。索引将被存放到Postgresql中。
 
-在完成上述准备后，后续只需执行test_find_similar_img_by_img_gui.py，即可启动图文搜图工具。
+在完成上述准备后，后续只需执行gui.py，即可启动图文搜图工具。
 
 + 如果向dataset目录中新增图片，需要重新执行dataset_preprocessing_rename.py和dataset_preprocessing_load_db.py。
 + 如果自行变更dataset目录中的图片位置（比如dataset/图库1中的图片移动到dataset/图库2），请执行dataset_preprocessing_repair_file_dir.py，修复数据库中的图片索引。
