@@ -14,15 +14,15 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QMimeData, QByteArray
 from dotenv import load_dotenv
-
-from app.bert.chinese_bert import ChineseBert
-from app.clip.chinese_clip import ChineseClip
-from app.models.img_vector import ImgVectorMapper
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.ocr.paddle_ocr_util import PaddleOCRUtil
-from app.qt.image_label import ImageLabel
+from src.app.bert.chinese_bert import ChineseBert
+from src.app.clip.chinese_clip import ChineseClip
+from src.app.db.mapper.img_vector_mapper import ImgVectorMapper
+from src.app.log.logger import logger
+from src.app.ocr.paddle_ocr_util import PaddleOCRUtil
+from src.app.qt.image_label import ImageLabel
 
 
 class ImageGridApp(QMainWindow):
@@ -32,6 +32,15 @@ class ImageGridApp(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        logger.info("init gui")
+        engine = create_engine(f"postgresql://"
+                               f"{os.getenv('POSTGRESQL_USER')}:{os.getenv('POSTGRESQL_PASSWORD')}"
+                               f"@{os.getenv('POSTGRESQL_HOST')}:{os.getenv('POSTGRESQL_PORT')}/{os.getenv('POSTGRESQL_DB')}")
+        self.Session = sessionmaker(bind=engine)
+        self.chinese_clip = ChineseClip()
+        self.ocr_util = PaddleOCRUtil("resources/ai-models/PP-OCRv5_server_det_infer",
+                                      "resources/ai-models/PP-OCRv5_server_rec_infer")
+        self.chinese_bert = ChineseBert()
 
         self.setWindowTitle("图文搜图")
         self.setGeometry(100, 100, 1200, 800)
@@ -203,7 +212,7 @@ class ImageGridApp(QMainWindow):
             clipboard = QApplication.clipboard()
             q_mime_data = QMimeData()
             q_mime_data.setData("text/uri-list", QByteArray(image_label.imageClipboardPath.encode('utf-8')))
-            print("复制图片路径", image_label.imageClipboardPath)
+            logger.info("复制图片路径：%s", image_label.imageClipboardPath)
             clipboard.setMimeData(q_mime_data)
 
     def on_click_push_button_choose_image(self):
@@ -213,7 +222,7 @@ class ImageGridApp(QMainWindow):
         )
 
         if file_path:
-            print("已选择图片：", file_path)
+            logger.info(f"已选择图片：{file_path}")
 
             pixmap = QPixmap(file_path)
 
@@ -232,17 +241,17 @@ class ImageGridApp(QMainWindow):
             if self.labelImageToSearch.imagePath:
                 with Image.open(self.labelImageToSearch.imagePath) as image:
                     # 计算输入图片的特征向量
-                    image_feature = chinese_clip.embed_image_to_vec(image)
+                    image_feature = self.chinese_clip.embed_image_to_vec(image)
                     image_feature_pg_str = "[" + ",".join([str(x) for x in image_feature[0]]) + "]"
                     # 从图片中识别文字OCR
-                    ocr_texts = ",".join(ocr_util.recognize(image))
+                    ocr_texts = ",".join(self.ocr_util.recognize(image))
                     # 计算OCR文字的特征向量
-                    ocr_text_sentence_vec = chinese_bert.embed_to_sentence_vec(ocr_texts)
+                    ocr_text_sentence_vec = self.chinese_bert.embed_to_sentence_vec(ocr_texts)
                     ocr_text_sentence_vec_str = "[" + ",".join([str(x) for x in ocr_text_sentence_vec]) + "]"
             else:
                 return
 
-            with Session() as session:
+            with self.Session() as session:
                 img_vector_mapper = ImgVectorMapper(session)
                 # 从Postgresql查找相似图的路径
                 img_vector_do_list = img_vector_mapper.search(image_feature_pg_str,
@@ -280,7 +289,7 @@ class ImageGridApp(QMainWindow):
 
 
         except Exception as e:
-            print(e)
+            logger.error(e)
 
     def on_click_push_button_search_by_text(self):
         # 清空网格图片
@@ -289,14 +298,14 @@ class ImageGridApp(QMainWindow):
         try:
             if self.textEditTextToSearch.toPlainText():
                 # 计算输入文本特征向量
-                text_feature_chinese_clip = chinese_clip.embed_text_to_vec(self.textEditTextToSearch.toPlainText())
+                text_feature_chinese_clip = self.chinese_clip.embed_text_to_vec(self.textEditTextToSearch.toPlainText())
                 text_feature_chinese_clip_pg_str = "[" + ",".join([str(x) for x in text_feature_chinese_clip[0]]) + "]"
-                text_feature_chinese_bert = chinese_bert.embed_to_sentence_vec(self.textEditTextToSearch.toPlainText())
+                text_feature_chinese_bert = self.chinese_bert.embed_to_sentence_vec(self.textEditTextToSearch.toPlainText())
                 text_feature_chinese_bert_pg_str = "[" + ",".join([str(x) for x in text_feature_chinese_bert]) + "]"
             else:
                 return
 
-            with Session() as session:
+            with self.Session() as session:
                 img_vector_mapper = ImgVectorMapper(session)
                 # 从Postgresql查找相似图的路径
                 img_vector_do_list = img_vector_mapper.search(text_feature_chinese_clip_pg_str,
@@ -336,7 +345,7 @@ class ImageGridApp(QMainWindow):
 
 
         except Exception as e:
-            print(e)
+            logger.error(e)
 
     def clear_images(self):
         # 清空网格图片
@@ -349,17 +358,9 @@ class ImageGridApp(QMainWindow):
                 label.clear()
 
 
-if __name__ == "__main__":
+def gui():
     # 载入数据库
     load_dotenv()
-    engine = create_engine(f"postgresql://"
-                           f"{os.getenv('POSTGRESQL_USER')}:{os.getenv('POSTGRESQL_PASSWORD')}"
-                           f"@{os.getenv('POSTGRESQL_HOST')}:{os.getenv('POSTGRESQL_PORT')}/{os.getenv('POSTGRESQL_DB')}")
-    Session = sessionmaker(bind=engine)
-    chinese_clip = ChineseClip()
-    ocr_util = PaddleOCRUtil("resources/ai-models/PP-OCRv5_server_det_infer",
-                             "resources/ai-models/PP-OCRv5_server_rec_infer")
-    chinese_bert = ChineseBert()
     app = QApplication(sys.argv)
     window = ImageGridApp()
     window.show()

@@ -1,32 +1,15 @@
 """
-Copyright © 2025-2025 tmx0103.
-Licensed under the Apache-2.0 License.
-For full terms, see the LICENSE file.
-img_vector.py
+Copyright © 2025-2025 tmx0103.  
+Licensed under the Apache-2.0 License.  
+For full terms, see the LICENSE file.  
+img_vector_mapper.py
 """
 from datetime import datetime
 
-from sqlalchemy import Column, BigInteger, TIMESTAMP, String, bindparam, Float
+from sqlalchemy import text, bindparam
 from sqlalchemy.orm import Session
-from sqlalchemy.sql import text
 
-from app.models import Base
-
-
-class ImgVectorDO(Base):
-    __tablename__ = 'tb_img_vector'
-    __table_args__ = {'schema': 'dev'}
-    id = Column(BigInteger, primary_key=True)
-    gmt_create = Column(TIMESTAMP)
-    file_dir = Column(String)
-    file_gmt_modified = Column(TIMESTAMP)
-    file_name = Column(String)
-    file_sha256 = Column(String)
-    img_vec = Column(String)
-    ocr_text = Column(String)
-    ocr_text_sentence_vec = Column(String)
-
-    cosine_distance = None
+from src.app.db.models import ImgVectorDO
 
 
 class ImgVectorMapper:
