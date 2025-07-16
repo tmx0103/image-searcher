@@ -2,6 +2,7 @@
 Copyright © 2025-2025 tmx0103.
 Licensed under the Apache-2.0 License.
 For full terms, see the LICENSE file.
+dataset_preprocessing_load_db.py
 """
 import os
 import shutil
@@ -71,5 +72,7 @@ if __name__ == "__main__":
                             os.rename(file_relative_path, os.path.join('异常图', file_dir, file_name))
                             continue
 
-                    img_vector_mapper.insert(image_feature_pg_str, file_dir, file_name, file_sha256)
+                    img_vector_mapper.insert(file_dir=file_dir, file_name=file_name, file_sha256=file_sha256,
+                                             img_vector=image_feature_pg_str,
+                                             ocr_text=None)
                     print(f"写表成功:{file_relative_path}")
