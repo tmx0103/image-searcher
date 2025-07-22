@@ -10,10 +10,10 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.app.bert.chinese_bert import ChineseBert
+from src.app.ai.chinese_bert import ChineseBert
+from src.app.db.mapper.img_vector_mapper import ImgVectorMapper
 from src.app.log.logger import logger
 from src.app.utils import sha256_util
-from src.app.db.mapper.img_vector_mapper import ImgVectorMapper
 
 if __name__ == "__main__":
     # 载入数据库

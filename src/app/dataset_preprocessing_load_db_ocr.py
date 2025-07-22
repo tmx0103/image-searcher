@@ -11,10 +11,10 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.app.log.logger import logger
-from src.app.ocr.paddle_ocr_util import PaddleOCRUtil
-from src.app.utils import sha256_util
+from src.app.ai.paddle_ocr_util import PaddleOCRUtil
 from src.app.db.mapper.img_vector_mapper import ImgVectorMapper
+from src.app.log.logger import logger
+from src.app.utils import sha256_util
 
 if __name__ == "__main__":
     # 载入数据库

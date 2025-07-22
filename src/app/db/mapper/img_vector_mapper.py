@@ -35,6 +35,16 @@ class ImgVectorMapper:
                                                                  ORDER BY ocr_text_sentence_vec <=> :query_vec
                                                                  LIMIT :limit
                                                                  """)
+        self.sql_template_all_text_vector_search = text("""
+                                                        SELECT id,
+                                                               file_dir,
+                                                               file_name,
+                                                               all_text_vec <=> :query_vec AS cosine_distance
+                                                        FROM dev.tb_img_vector
+                                                        WHERE all_text_vec <=> :query_vec < :max_cosine_distance
+                                                        ORDER BY all_text_vec <=> :query_vec
+                                                        LIMIT :limit
+                                                        """)
         self.sql_template_text_search = text("""
                                              SELECT id,
                                                     file_dir,
@@ -79,6 +89,11 @@ class ImgVectorMapper:
             {ImgVectorDO.ocr_text_sentence_vec: ocr_text_sentence_vec})
         self.session.commit()
 
+    def update_all_text_vec_by_file_sha256(self, file_sha256, all_text_vec):
+        self.session.query(ImgVectorDO).filter(ImgVectorDO.file_sha256 == file_sha256).update(
+            {ImgVectorDO.all_text_vec: all_text_vec})
+        self.session.commit()
+
     def search(self, img_vector: str, cosine_similarity: float, limit: int):
         max_cosine_distance = 1 - cosine_similarity
         orm_sql = self.session.query(ImgVectorDO).from_statement(
@@ -103,6 +118,17 @@ class ImgVectorMapper:
         max_cosine_distance = 1 - cosine_similarity
         orm_sql = self.session.query(ImgVectorDO).from_statement(
             self.sql_template_ocr_text_sentence_vector_search.bindparams(
+                bindparam("query_vec", value=text_vector),
+                bindparam("max_cosine_distance", value=max_cosine_distance),
+                bindparam("limit", value=limit))
+            .columns(ImgVectorDO.id, ImgVectorDO.file_dir, ImgVectorDO.file_name, ImgVectorDO.cosine_distance)
+        )
+        return orm_sql.all()
+
+    def search_by_all_text_vector(self, text_vector: str, cosine_similarity: float, limit: int):
+        max_cosine_distance = 1 - cosine_similarity
+        orm_sql = self.session.query(ImgVectorDO).from_statement(
+            self.sql_template_all_text_vector_search.bindparams(
                 bindparam("query_vec", value=text_vector),
                 bindparam("max_cosine_distance", value=max_cosine_distance),
                 bindparam("limit", value=limit))
