@@ -4,10 +4,24 @@ Licensed under the Apache-2.0 License.
 For full terms, see the LICENSE file.  
 chinese_clip.py
 """
+from threading import Lock
+
 from transformers import ChineseCLIPModel, ChineseCLIPProcessor
 
 
 class ChineseClip:
+    _instance = None
+    _lock = Lock()
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance:
+            return cls._instance
+        with cls._lock:
+            if not cls._instance:
+                cls._instance = ChineseClip()
+        return cls._instance
+
     def __init__(self):
         self.model = ChineseCLIPModel.from_pretrained("OFA-Sys/chinese-clip-vit-huge-patch14").to("cuda")
         self.processor = ChineseCLIPProcessor.from_pretrained("OFA-Sys/chinese-clip-vit-huge-patch14")

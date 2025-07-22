@@ -4,11 +4,25 @@ Licensed under the Apache-2.0 License.
 For full terms, see the LICENSE file.  
 chinese_bert.py
 """
+from threading import Lock
+
 import torch
 from transformers import BertTokenizer, BertModel
 
 
 class ChineseBert:
+    _instance = None
+    _lock = Lock()
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance:
+            return cls._instance
+        with cls._lock:
+            if not cls._instance:
+                cls._instance = ChineseBert()
+        return cls._instance
+
     def __init__(self):
         self.modelName = "bert-base-chinese"
         self.tokenizer = BertTokenizer.from_pretrained(self.modelName)

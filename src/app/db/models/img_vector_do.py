@@ -22,5 +22,8 @@ class ImgVectorDO(Base):
     img_vec = Column(String)
     ocr_text = Column(String)
     ocr_text_sentence_vec = Column(String)
+    tag_text = Column(String)
+    tag_text_vec = Column(String)
+    all_text_vec = Column(String)
 
     cosine_distance = None
