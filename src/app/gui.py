@@ -55,46 +55,20 @@ class Gui(QMainWindow):
 
         #####################################
         # 主窗体左侧控制区结构
-        # -标签：文本检索
-        # -检索文本框
-        # -文本检索按钮
-        # -分隔线
         # -标签：大模型检索
         # -大模型对话历史文本框
         # -大模型检索文本框
-        # -左右布局：清除历史、提问/停止
+        # -左右布局：清除历史、提问/停止、直接用文本检索
         # -分隔线
         # -标签：图片检索
         # -左右布局：选择图片按钮、清除图片按钮
         # -标签：图片展示
         # -图片检索按钮
         #####################################
-
         # 主窗体左侧控制区（上下布局）
         self.vBoxWidgetControl = QWidget()
         self.vBoxLayoutControl = QVBoxLayout()
         self.vBoxWidgetControl.setLayout(self.vBoxLayoutControl)
-        # -标签：文本检索，文字样式为：字体10，加粗，占整个布局的大小为定长
-        self.labelTitleSearchByText = QLabel("通过文本检索")
-        self.labelTitleSearchByText.setStyleSheet("font-size: 15pt; font-weight: bold;font-family: 微软雅黑;")
-        self.labelTitleSearchByText.setFixedHeight(30)
-        # -检索文本框，支持多行，字体10
-        self.textEditTextToSearch = QTextEdit()
-        self.textEditTextToSearch.setPlaceholderText("输入待检索的文本")
-        self.textEditTextToSearch.setStyleSheet("font-size: 12pt;font-family: 微软雅黑;")
-        self.textEditTextToSearch.setFixedHeight(100)
-
-        # -文本检索按钮
-        self.pushButtonSearchByText = QPushButton("搜索")
-        self.pushButtonSearchByText.setStyleSheet("font-size: 12pt;font-family: 微软雅黑;")
-        self.pushButtonSearchByText.setFixedHeight(30)
-        self.pushButtonSearchByText.clicked.connect(self.on_click_push_button_search_by_text)
-
-        # -分隔线
-        self.frameBlankLineLeft1 = QFrame()
-        self.frameBlankLineLeft1.setLineWidth(1)
-        self.frameBlankLineLeft1.setFrameShape(QFrame.HLine)
-        self.frameBlankLineLeft1.setStyleSheet("background-color: black;")
 
         # -标签：大模型检索
         self.labelTitleSearchByLlm = QLabel("通过大模型检索")
@@ -104,7 +78,7 @@ class Gui(QMainWindow):
         self.textEditLlmHistory = QTextEdit()
         self.textEditLlmHistory.setPlaceholderText("对话历史")
         self.textEditLlmHistory.setStyleSheet("font-size: 12pt;font-family: 微软雅黑;")
-        self.textEditLlmHistory.setFixedHeight(150)
+        self.textEditLlmHistory.setMinimumHeight(250)
         self.textEditLlmHistory.setReadOnly(True)
         # -大模型检索文本框
         self.textEditLlmToSearch = QTextEdit()
@@ -123,15 +97,21 @@ class Gui(QMainWindow):
         self.pushButtonAskLlm.setStyleSheet("font-size: 12pt;font-family: 微软雅黑;")
         self.pushButtonAskLlm.setFixedHeight(30)
         self.pushButtonAskLlm.clicked.connect(self.on_click_push_button_ask_or_stop_llm)
+        # --直接用文本检索按钮
+        self.pushButtonSearchByText = QPushButton("文本搜索")
+        self.pushButtonSearchByText.setStyleSheet("font-size: 12pt;font-family: 微软雅黑;")
+        self.pushButtonSearchByText.setFixedHeight(30)
+        self.pushButtonSearchByText.clicked.connect(self.on_click_push_button_search_by_text)
 
         self.hBoxLayoutSearchByLlmControl.addWidget(self.pushButtonClearLlmHistory)
         self.hBoxLayoutSearchByLlmControl.addWidget(self.pushButtonAskLlm)
+        self.hBoxLayoutSearchByLlmControl.addWidget(self.pushButtonSearchByText)
 
         # -分隔线
-        self.frameBlankLineLeft2 = QFrame()
-        self.frameBlankLineLeft2.setLineWidth(1)
-        self.frameBlankLineLeft2.setFrameShape(QFrame.HLine)
-        self.frameBlankLineLeft2.setStyleSheet("background-color: black;")
+        self.frameBlankLineLeft1 = QFrame()
+        self.frameBlankLineLeft1.setLineWidth(1)
+        self.frameBlankLineLeft1.setFrameShape(QFrame.HLine)
+        self.frameBlankLineLeft1.setStyleSheet("background-color: black;")
 
         # -标签：图片检索
         self.labelTitleSearchByImage = QLabel("通过图片检索")
@@ -168,15 +148,11 @@ class Gui(QMainWindow):
         self.pushButtonSearchByImage.setFixedHeight(30)
         self.pushButtonSearchByImage.clicked.connect(self.on_click_push_button_search_by_image)
 
-        self.vBoxLayoutControl.addWidget(self.labelTitleSearchByText)
-        self.vBoxLayoutControl.addWidget(self.textEditTextToSearch)
-        self.vBoxLayoutControl.addWidget(self.pushButtonSearchByText)
-        self.vBoxLayoutControl.addWidget(self.frameBlankLineLeft1)
         self.vBoxLayoutControl.addWidget(self.labelTitleSearchByLlm)
         self.vBoxLayoutControl.addWidget(self.textEditLlmHistory)
         self.vBoxLayoutControl.addWidget(self.textEditLlmToSearch)
         self.vBoxLayoutControl.addLayout(self.hBoxLayoutSearchByLlmControl)
-        self.vBoxLayoutControl.addWidget(self.frameBlankLineLeft2)
+        self.vBoxLayoutControl.addWidget(self.frameBlankLineLeft1)
         self.vBoxLayoutControl.addWidget(self.labelTitleSearchByImage)
         self.vBoxLayoutControl.addLayout(self.hBoxLayoutSearchByImageControl)
         self.vBoxLayoutControl.addWidget(self.labelImageToSearch)
@@ -305,8 +281,8 @@ class Gui(QMainWindow):
             logger.error(e)
 
     def on_click_push_button_search_by_text(self):
-        if self.textEditTextToSearch.toPlainText():
-            self.do_push_button_search_by_text(self.textEditTextToSearch.toPlainText())
+        if self.textEditLlmToSearch.toPlainText():
+            self.do_push_button_search_by_text(self.textEditLlmToSearch.toPlainText())
 
     def do_push_button_search_by_text(self, text: str):
         self.show_overlay()
