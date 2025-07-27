@@ -1,39 +1,31 @@
 """
-Copyright © 2025-2025 tmx0103.
-Licensed under the Apache-2.0 License.
-For full terms, see the LICENSE file.
-gui.py
+Copyright © 2025-2025 tmx0103.  
+Licensed under the Apache-2.0 License.  
+For full terms, see the LICENSE file.  
+control_panel.py
 """
-import sys
-from threading import Lock
-
-from PyQt5.QtCore import Qt, QMimeData, QByteArray
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QPixmap, QTextCursor
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
-                             QHBoxLayout, QPushButton, QLabel,
-                             QFileDialog, QGridLayout, QMenu, QTextEdit, QFrame)
-from PyQt5.sip import isdeleted
-from dotenv import load_dotenv
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QTextEdit, QHBoxLayout, QPushButton, QFrame, QFileDialog
 
 from src.app.ai.ai_agent import AiAgent
 from src.app.ai.tools.img_search_tool import ImgSearchTool
+from src.app.gui.exhibition_panel import ExhibitionPanel
 from src.app.log.logger import logger
 from src.app.qt.image_label import ImageLabel
 from src.app.qt.llm_thread import LlmThread
-from src.app.qt.overlay_widget import OverlayWidget
 from src.app.qt.search_thread import SearchThread
 from src.app.service.img_search_service import ImgSearchService
 
 
-class Gui(QMainWindow):
-    SIMILAR_IMG_COLS = 8
-    SIMILAR_IMG_ROWS = 2
-    MAX_SIMILAR_IMG_COUNT = SIMILAR_IMG_COLS * SIMILAR_IMG_ROWS
-    OVERLAY_LOCK = Lock()
+class ControlPanel(QWidget):
+    signalSwitchOverlay = pyqtSignal(bool)
+    signalClearImages = pyqtSignal()
+    signalUpdateLabelImageSearchResultMultiModelMatrix = pyqtSignal(list)
+    signalUpdateLabelImageSearchResultOcrMatrix = pyqtSignal(list)
 
     def __init__(self):
         super().__init__()
-        logger.info("init gui")
         self.aiAgent = AiAgent()
         self.imgSearchService = ImgSearchService.get_instance()
 
@@ -41,20 +33,8 @@ class Gui(QMainWindow):
         self.searchThread = None
         self.imgSearchTool = ImgSearchTool.get_instance()
         self.imgSearchTool.signal_start_img_search.connect(self.on_signal_start_img_search_by_text)
-
-        self.overlay = None
-
-        self.setWindowTitle("图文搜图")
-        self.setGeometry(100, 100, 1200, 800)
-
-        # 主控件
-        main_widget = QWidget()
-        self.setCentralWidget(main_widget)
-        # 主窗体：水平布局（左右布局）
-        self.hBoxLayoutMain = QHBoxLayout()
-
         #####################################
-        # 主窗体左侧控制区结构
+        # 控制区结构
         # -标签：大模型检索
         # -大模型对话历史文本框
         # -大模型检索文本框
@@ -65,10 +45,8 @@ class Gui(QMainWindow):
         # -标签：图片展示
         # -图片检索按钮
         #####################################
-        # 主窗体左侧控制区（上下布局）
-        self.vBoxWidgetControl = QWidget()
+        # 控制区（上下布局）
         self.vBoxLayoutControl = QVBoxLayout()
-        self.vBoxWidgetControl.setLayout(self.vBoxLayoutControl)
 
         # -标签：大模型检索
         self.labelTitleSearchByLlm = QLabel("通过大模型检索")
@@ -158,91 +136,7 @@ class Gui(QMainWindow):
         self.vBoxLayoutControl.addWidget(self.labelImageToSearch)
         self.vBoxLayoutControl.addWidget(self.pushButtonSearchByImage)
 
-        self.hBoxLayoutMain.addWidget(self.vBoxWidgetControl)
-
-        #####################################
-        # 主窗体右侧展示区结构
-        # -标签：多模态模型检索结果
-        # -网格布局：若干个多模态模型检索图片标签
-        # -分隔线
-        # -标签：OCR检索结果
-        # -网格布局：若干个OCR检索图片标签
-        #####################################
-        # 主窗体右侧展示区（上下布局）
-        self.vBoxWidgetShow = QWidget()
-        self.vBoxLayoutShow = QVBoxLayout()
-        self.vBoxWidgetShow.setLayout(self.vBoxLayoutShow)
-        # -标签：多模态模型检索结果，文字样式为：字体10，加粗，占整个布局的大小为定长
-        self.labelTitleSearchResultMultiModel = QLabel("多模态模型检索结果")
-        self.labelTitleSearchResultMultiModel.setStyleSheet("font-size: 15pt; font-weight: bold;font-family: 微软雅黑;")
-        self.labelTitleSearchResultMultiModel.setFixedHeight(30)
-        # -网格布局：若干个多模态模型检索图片标签
-        self.gridLayoutMultiModel = QGridLayout()
-        self.labelImageSearchResultMultiModelMatrix = []
-        for row in range(Gui.SIMILAR_IMG_ROWS):
-            label_row = []
-            for col in range(Gui.SIMILAR_IMG_COLS):
-                label = ImageLabel()
-                label.setFixedSize(150, 150)
-                label.setStyleSheet("border: 1px solid black;")
-                label.setAlignment(Qt.AlignCenter)
-                label.setContextMenuPolicy(Qt.CustomContextMenu)
-                label.customContextMenuRequested.connect(self.on_show_context_menu)
-                self.gridLayoutMultiModel.addWidget(label, row, col)
-                label_row.append(label)
-            self.labelImageSearchResultMultiModelMatrix.append(label_row)
-
-        # -分隔线
-        self.frameBlankLineRight = QFrame()
-        self.frameBlankLineRight.setLineWidth(1)
-        self.frameBlankLineRight.setFrameShape(QFrame.HLine)
-        self.frameBlankLineRight.setStyleSheet("background-color: black;")
-
-        # -标签：OCR检索结果，文字样式为：字体10，加粗，占整个布局的大小为定长
-        self.labelTitleSearchResultOcr = QLabel("OCR检索结果")
-        self.labelTitleSearchResultOcr.setStyleSheet("font-size: 15pt; font-weight: bold;font-family: 微软雅黑;")
-        self.labelTitleSearchResultOcr.setFixedHeight(30)
-        # -网格布局：若干个OCR检索图片标签
-        self.gridLayoutOcr = QGridLayout()
-        self.labelImageSearchResultOcrMatrix = []
-        for row in range(Gui.SIMILAR_IMG_ROWS):
-            label_row = []
-            for col in range(Gui.SIMILAR_IMG_COLS):
-                label = ImageLabel()
-                label.setFixedSize(150, 150)
-                label.setStyleSheet("border: 1px solid black;")
-                label.setAlignment(Qt.AlignCenter)
-                label.setContextMenuPolicy(Qt.CustomContextMenu)
-                label.customContextMenuRequested.connect(self.on_show_context_menu)
-                self.gridLayoutOcr.addWidget(label, row, col)
-                label_row.append(label)
-            self.labelImageSearchResultOcrMatrix.append(label_row)
-
-        self.vBoxLayoutShow.addWidget(self.labelTitleSearchResultMultiModel)
-        self.vBoxLayoutShow.addLayout(self.gridLayoutMultiModel)
-        self.vBoxLayoutShow.addWidget(self.frameBlankLineRight)
-        self.vBoxLayoutShow.addWidget(self.labelTitleSearchResultOcr)
-        self.vBoxLayoutShow.addLayout(self.gridLayoutOcr)
-
-        self.hBoxLayoutMain.addWidget(self.vBoxWidgetShow)
-
-        main_widget.setLayout(self.hBoxLayoutMain)
-
-    def on_show_context_menu(self, pos):
-        image_label: ImageLabel = self.sender()
-        if not image_label.pixmap():
-            return
-
-        menu = QMenu()
-        copy_action = menu.addAction("复制图片")
-        action = menu.exec_(image_label.mapToGlobal(pos))
-
-        if action == copy_action:
-            clipboard = QApplication.clipboard()
-            q_mime_data = QMimeData()
-            q_mime_data.setData("text/uri-list", QByteArray(image_label.imageClipboardPath.encode('utf-8')))
-            logger.info("复制图片路径：%s", image_label.imageClipboardPath)
-            clipboard.setMimeData(q_mime_data)
+        self.setLayout(self.vBoxLayoutControl)
 
     def on_click_push_button_choose_image(self):
         # 打开文件选择对话框
@@ -260,20 +154,20 @@ class Gui(QMainWindow):
             self.labelImageToSearch.setImagePath(file_path)
 
     def on_click_push_button_clear_image(self):
-        self.labelImageToSearch.clear()
-        self.show_overlay()
+        self.signalClearImages.emit()
 
     def on_click_push_button_search_by_image(self):
         # 清空展示区图片
-        self.clear_images()
+        self.signalClearImages.emit()
         cosine_similarity = 0.0
         try:
             if self.labelImageToSearch.imagePath:
                 similar_img_model_multi_model_list, similar_img_model_all_text_list \
-                    = self.imgSearchService.search_by_img(self.labelImageToSearch.imagePath, cosine_similarity, Gui.MAX_SIMILAR_IMG_COUNT)
+                    = self.imgSearchService.search_by_img(self.labelImageToSearch.imagePath, cosine_similarity,
+                                                          ExhibitionPanel.MAX_SIMILAR_IMG_COUNT)
                 # 填充展示区图片
-                self.update_label_image_search_result_multi_model_matrix(similar_img_model_multi_model_list)
-                self.update_label_image_search_result_ocr_matrix(similar_img_model_all_text_list)
+                self.signalUpdateLabelImageSearchResultMultiModelMatrix.emit(similar_img_model_multi_model_list)
+                self.signalUpdateLabelImageSearchResultOcrMatrix.emit(similar_img_model_all_text_list)
 
             else:
                 return
@@ -285,11 +179,11 @@ class Gui(QMainWindow):
             self.do_push_button_search_by_text(self.textEditLlmToSearch.toPlainText())
 
     def do_push_button_search_by_text(self, text: str):
-        self.show_overlay()
-        self.clear_images()
+        self.signalSwitchOverlay.emit(True)
+        self.signalClearImages.emit()
         cosine_similarity = 0.0
         # 创建工作线程处理查询请求
-        self.searchThread = SearchThread(text, cosine_similarity, Gui.MAX_SIMILAR_IMG_COUNT)
+        self.searchThread = SearchThread(text, cosine_similarity, ExhibitionPanel.MAX_SIMILAR_IMG_COUNT)
         self.searchThread.finished.connect(lambda search_thread=self.searchThread: self.on_signal_search_finished(search_thread))
         self.searchThread.start()
 
@@ -297,41 +191,17 @@ class Gui(QMainWindow):
         logger.info("搜索完成")
         similar_img_model_multi_model_list = search_thread.similar_img_model_multi_model_list
         similar_img_model_all_text_list = search_thread.similar_img_model_all_text_list
-        self.update_label_image_search_result_multi_model_matrix(similar_img_model_multi_model_list)
-        self.update_label_image_search_result_ocr_matrix(similar_img_model_all_text_list)
-        self.hide_overlay()
+        self.signalUpdateLabelImageSearchResultMultiModelMatrix.emit(similar_img_model_multi_model_list)
+        self.signalUpdateLabelImageSearchResultOcrMatrix.emit(similar_img_model_all_text_list)
+        self.signalSwitchOverlay.emit(False)
 
     def on_signal_start_img_search_by_text(self, text: str):
         self.do_push_button_search_by_text(text)
 
     def update_all_label_image_search_result_matrix(self, similar_img_model_multi_model_list, similar_img_model_all_text_list):
-        self.clear_images()
-        self.update_label_image_search_result_multi_model_matrix(similar_img_model_multi_model_list)
-        self.update_label_image_search_result_ocr_matrix(similar_img_model_all_text_list)
-
-    def update_label_image_search_result_multi_model_matrix(self, similar_img_model_multi_model_list):
-        i = 0
-        for similar_img_model_multi_model in similar_img_model_multi_model_list:
-            row = i // Gui.SIMILAR_IMG_COLS
-            col = i % Gui.SIMILAR_IMG_COLS
-            image_label: ImageLabel = self.labelImageSearchResultMultiModelMatrix[row][col]
-            image_label.setPixmap(QPixmap(similar_img_model_multi_model.file_relative_path))
-            image_label.setImagePath(similar_img_model_multi_model.file_relative_path)
-            i += 1
-            if i >= Gui.MAX_SIMILAR_IMG_COUNT:
-                break
-
-    def update_label_image_search_result_ocr_matrix(self, similar_img_model_all_text_list):
-        i = 0
-        for similar_img_model_all_text in similar_img_model_all_text_list:
-            row = i // Gui.SIMILAR_IMG_COLS
-            col = i % Gui.SIMILAR_IMG_COLS
-            image_label: ImageLabel = self.labelImageSearchResultOcrMatrix[row][col]
-            image_label.setPixmap(QPixmap(similar_img_model_all_text.file_relative_path))
-            image_label.setImagePath(similar_img_model_all_text.file_relative_path)
-            i += 1
-            if i >= Gui.MAX_SIMILAR_IMG_COUNT:
-                break
+        self.signalClearImages.emit()
+        self.signalUpdateLabelImageSearchResultMultiModelMatrix.emit(similar_img_model_multi_model_list)
+        self.signalUpdateLabelImageSearchResultOcrMatrix.emit(similar_img_model_all_text_list)
 
     def on_click_push_button_clear_llm_history(self):
         self.textEditLlmHistory.clear()
@@ -379,39 +249,3 @@ class Gui(QMainWindow):
 
         # 清理工作线程
         self.llmThread = None
-
-    def clear_images(self):
-        # 清空网格图片
-        for labelRow in self.labelImageSearchResultMultiModelMatrix:
-            for label in labelRow:
-                label.clear()
-
-        for labelRow in self.labelImageSearchResultOcrMatrix:
-            for label in labelRow:
-                label.clear()
-
-    def show_overlay(self):
-        with self.OVERLAY_LOCK:
-            logger.info("开始添加覆盖层")
-            # 只有覆盖层不存在时才添加覆盖层
-            if not self.overlay or isdeleted(self.overlay):
-                self.overlay = OverlayWidget(self.vBoxWidgetShow)
-                self.overlay.show()
-            else:
-                logger.info("已存在覆盖层")
-
-    def hide_overlay(self):
-        with self.OVERLAY_LOCK:
-            logger.info("开始删除覆盖层")
-            # 只有覆盖层存在并且未销毁时才删除覆盖层
-            if self.overlay and not isdeleted(self.overlay):
-                logger.info("删除覆盖层")
-                self.overlay.deleteLater()  # 安全移除覆盖层
-
-
-def gui():
-    load_dotenv()
-    app = QApplication(sys.argv)
-    window = Gui()
-    window.show()
-    sys.exit(app.exec())
