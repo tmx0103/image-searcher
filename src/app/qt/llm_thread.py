@@ -16,16 +16,17 @@ class LlmThread(QThread):
     finished = pyqtSignal()
     error = pyqtSignal(str)
 
-    def __init__(self, ai_agent: AiAgent, prompt):
+    def __init__(self, ai_agent: AiAgent, prompt, image_path_list: list = None):
         super().__init__()
         self.aiAgent = ai_agent
         self.prompt = prompt
+        self.imagePathList = image_path_list
 
     def run(self):
         try:
             # 流式调用模型
             logger.info("开始调用模型...")
-            for chunk in self.aiAgent.stream(self.prompt):
+            for chunk in self.aiAgent.stream(self.prompt, self.imagePathList):
                 logger.debug("模型输出:%s", chunk)
                 self.model_token_generated.emit(chunk)  # 发送每个文本块
             self.finished.emit()

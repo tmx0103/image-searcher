@@ -38,6 +38,10 @@ if __name__ == '__main__':
     os.makedirs(log_dir, exist_ok=True)
 
     logging.config.dictConfig(LOGGING_CONFIG)
-    from src.app import run
 
-    run()
+    try:
+        from src.app import run
+
+        run()
+    except Exception as e:
+        logging.error(e)

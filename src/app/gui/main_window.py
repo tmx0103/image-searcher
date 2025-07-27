@@ -37,6 +37,7 @@ class MainWindow(QMainWindow):
         # 主窗体：水平布局（左右布局）
         self.hBoxLayoutMain = QHBoxLayout()
         self.splitterMain = QSplitter(Qt.Horizontal)
+        self.splitterMain.setStyleSheet("QSplitter::handle{background-color: rgb(200, 200, 200);}")
 
         self.controlPanel = ControlPanel()
         self.exhibitionPanel = ExhibitionPanel()

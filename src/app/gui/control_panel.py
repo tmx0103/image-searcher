@@ -6,11 +6,12 @@ control_panel.py
 """
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QPixmap, QTextCursor
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QTextEdit, QHBoxLayout, QPushButton, QFrame, QFileDialog
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QTextEdit, QHBoxLayout, QPushButton, QFileDialog, QScrollArea
 
 from src.app.ai.ai_agent import AiAgent
 from src.app.ai.tools.img_search_tool import ImgSearchTool
 from src.app.gui.exhibition_panel import ExhibitionPanel
+from src.app.gui.grid_widget_image_to_search import GridWidgetImageToSearch
 from src.app.log.logger import logger
 from src.app.qt.image_label import ImageLabel
 from src.app.qt.llm_thread import LlmThread
@@ -35,21 +36,18 @@ class ControlPanel(QWidget):
         self.imgSearchTool.signal_start_img_search.connect(self.on_signal_start_img_search_by_text)
         #####################################
         # 控制区结构
-        # -标签：大模型检索
+        # -标签：检索
         # -大模型对话历史文本框
+        # -滚动布局：待检索图片区域
         # -大模型检索文本框
-        # -左右布局：清除历史、提问/停止、直接用文本检索
-        # -分隔线
-        # -标签：图片检索
-        # -左右布局：选择图片按钮、清除图片按钮
-        # -标签：图片展示
-        # -图片检索按钮
+        # -左右布局：新增图片按钮、清除历史、提问/停止
+        # -左右布局：直接用文本检索、直接用图片检索
         #####################################
         # 控制区（上下布局）
         self.vBoxLayoutControl = QVBoxLayout()
 
-        # -标签：大模型检索
-        self.labelTitleSearchByLlm = QLabel("通过大模型检索")
+        # -标签：检索
+        self.labelTitleSearchByLlm = QLabel("检索")
         self.labelTitleSearchByLlm.setStyleSheet("font-size: 15pt; font-weight: bold;font-family: 微软雅黑;")
         self.labelTitleSearchByLlm.setFixedHeight(30)
         # -大模型对话历史文本框
@@ -58,13 +56,25 @@ class ControlPanel(QWidget):
         self.textEditLlmHistory.setStyleSheet("font-size: 12pt;font-family: 微软雅黑;")
         self.textEditLlmHistory.setMinimumHeight(250)
         self.textEditLlmHistory.setReadOnly(True)
+        # -滚动布局：待检索图片区域
+        self.scrollAreaImageToSearch = QScrollArea()
+        self.scrollAreaImageToSearch.setWidgetResizable(True)
+
+        self.gridWidgetImageToSearch = GridWidgetImageToSearch()
+        self.scrollAreaImageToSearch.setWidget(self.gridWidgetImageToSearch)
+
         # -大模型检索文本框
         self.textEditLlmToSearch = QTextEdit()
         self.textEditLlmToSearch.setPlaceholderText("在这里输入问题")
         self.textEditLlmToSearch.setStyleSheet("font-size: 12pt;font-family: 微软雅黑;")
         self.textEditLlmToSearch.setFixedHeight(40)
-        # -左右布局：清除历史、提问/停止
+        # -左右布局：新增图片按钮、清除历史、提问/停止
         self.hBoxLayoutSearchByLlmControl = QHBoxLayout()
+        # --新增图片按钮
+        self.pushButtonAddImage = QPushButton("新增图片")
+        self.pushButtonAddImage.setStyleSheet("font-size: 12pt;font-family: 微软雅黑;")
+        self.pushButtonAddImage.setFixedHeight(30)
+        self.pushButtonAddImage.clicked.connect(self.on_click_push_button_add_image)
         # --清除历史按钮
         self.pushButtonClearLlmHistory = QPushButton("清除历史")
         self.pushButtonClearLlmHistory.setStyleSheet("font-size: 12pt;font-family: 微软雅黑;")
@@ -75,70 +85,37 @@ class ControlPanel(QWidget):
         self.pushButtonAskLlm.setStyleSheet("font-size: 12pt;font-family: 微软雅黑;")
         self.pushButtonAskLlm.setFixedHeight(30)
         self.pushButtonAskLlm.clicked.connect(self.on_click_push_button_ask_or_stop_llm)
+
+        self.hBoxLayoutSearchByLlmControl.addWidget(self.pushButtonAddImage)
+        self.hBoxLayoutSearchByLlmControl.addWidget(self.pushButtonClearLlmHistory)
+        self.hBoxLayoutSearchByLlmControl.addWidget(self.pushButtonAskLlm)
+
+        # -左右布局：直接用文本检索、直接用图片检索
+        self.hBoxLayoutSearchDirectLy = QHBoxLayout()
         # --直接用文本检索按钮
-        self.pushButtonSearchByText = QPushButton("文本搜索")
+        self.pushButtonSearchByText = QPushButton("纯文本搜索")
         self.pushButtonSearchByText.setStyleSheet("font-size: 12pt;font-family: 微软雅黑;")
         self.pushButtonSearchByText.setFixedHeight(30)
         self.pushButtonSearchByText.clicked.connect(self.on_click_push_button_search_by_text)
-
-        self.hBoxLayoutSearchByLlmControl.addWidget(self.pushButtonClearLlmHistory)
-        self.hBoxLayoutSearchByLlmControl.addWidget(self.pushButtonAskLlm)
-        self.hBoxLayoutSearchByLlmControl.addWidget(self.pushButtonSearchByText)
-
-        # -分隔线
-        self.frameBlankLineLeft1 = QFrame()
-        self.frameBlankLineLeft1.setLineWidth(1)
-        self.frameBlankLineLeft1.setFrameShape(QFrame.HLine)
-        self.frameBlankLineLeft1.setStyleSheet("background-color: black;")
-
-        # -标签：图片检索
-        self.labelTitleSearchByImage = QLabel("通过图片检索")
-        self.labelTitleSearchByImage.setStyleSheet("font-size: 15pt; font-weight: bold;font-family: 微软雅黑;")
-        self.labelTitleSearchByImage.setFixedHeight(30)
-
-        # -左右布局：选择图片按钮、清除图片按钮、检索按钮
-        self.hBoxLayoutSearchByImageControl = QHBoxLayout()
-        # --选择图片按钮
-        self.pushButtonChooseImage = QPushButton("选择图片")
-        self.pushButtonChooseImage.setStyleSheet("font-size: 12pt;font-family: 微软雅黑;")
-        self.pushButtonChooseImage.setFixedHeight(30)
-        self.pushButtonChooseImage.clicked.connect(self.on_click_push_button_choose_image)
-        # --清除图片按钮
-        self.pushButtonClearImage = QPushButton("清除图片")
-        self.pushButtonClearImage.setStyleSheet("font-size: 12pt;font-family: 微软雅黑;")
-        self.pushButtonClearImage.setFixedHeight(30)
-        self.pushButtonClearImage.clicked.connect(self.on_click_push_button_clear_image)
-
-        self.hBoxLayoutSearchByImageControl.addWidget(self.pushButtonChooseImage)
-        self.hBoxLayoutSearchByImageControl.addWidget(self.pushButtonClearImage)
-
-        # -标签：图片展示
-        self.labelImageToSearch = ImageLabel("待检索图片")
-        self.labelImageToSearch.setMinimumWidth(300)
-        self.labelImageToSearch.setMinimumHeight(300)
-        self.labelImageToSearch.setMaximumHeight(500)
-        self.labelImageToSearch.setStyleSheet("border: 2px solid blue;")
-        self.labelImageToSearch.setAlignment(Qt.AlignCenter)
-
-        # -图片检索按钮
-        self.pushButtonSearchByImage = QPushButton("搜索")
+        # --直接用图片检索
+        self.pushButtonSearchByImage = QPushButton("仅单一图片搜索")
         self.pushButtonSearchByImage.setStyleSheet("font-size: 12pt;font-family: 微软雅黑;")
         self.pushButtonSearchByImage.setFixedHeight(30)
         self.pushButtonSearchByImage.clicked.connect(self.on_click_push_button_search_by_image)
 
+        self.hBoxLayoutSearchDirectLy.addWidget(self.pushButtonSearchByText)
+        self.hBoxLayoutSearchDirectLy.addWidget(self.pushButtonSearchByImage)
+
         self.vBoxLayoutControl.addWidget(self.labelTitleSearchByLlm)
         self.vBoxLayoutControl.addWidget(self.textEditLlmHistory)
+        self.vBoxLayoutControl.addWidget(self.scrollAreaImageToSearch)
         self.vBoxLayoutControl.addWidget(self.textEditLlmToSearch)
         self.vBoxLayoutControl.addLayout(self.hBoxLayoutSearchByLlmControl)
-        self.vBoxLayoutControl.addWidget(self.frameBlankLineLeft1)
-        self.vBoxLayoutControl.addWidget(self.labelTitleSearchByImage)
-        self.vBoxLayoutControl.addLayout(self.hBoxLayoutSearchByImageControl)
-        self.vBoxLayoutControl.addWidget(self.labelImageToSearch)
-        self.vBoxLayoutControl.addWidget(self.pushButtonSearchByImage)
+        self.vBoxLayoutControl.addLayout(self.hBoxLayoutSearchDirectLy)
 
         self.setLayout(self.vBoxLayoutControl)
 
-    def on_click_push_button_choose_image(self):
+    def on_click_push_button_add_image(self):
         # 打开文件选择对话框
         file_path, _ = QFileDialog.getOpenFileName(
             self, "选择图片", "", "图片文件 (*.png *.jpg *.jpeg *.gif)"
@@ -150,20 +127,25 @@ class ControlPanel(QWidget):
             pixmap = QPixmap(file_path)
 
             # 更新主图片,按比例缩放
-            self.labelImageToSearch.setPixmap(pixmap)
-            self.labelImageToSearch.setImagePath(file_path)
-
-    def on_click_push_button_clear_image(self):
-        self.signalClearImages.emit()
+            # -标签：图片展示
+            labelImageToSearch = ImageLabel("待检索图片")
+            labelImageToSearch.setFixedSize(130, 130)
+            labelImageToSearch.setAlignment(Qt.AlignCenter)
+            labelImageToSearch.setPixmap(pixmap)
+            labelImageToSearch.setImagePath(file_path)
+            self.gridWidgetImageToSearch.add_widget(labelImageToSearch)
 
     def on_click_push_button_search_by_image(self):
+        self.signalSwitchOverlay.emit(True)
         # 清空展示区图片
         self.signalClearImages.emit()
         cosine_similarity = 0.0
         try:
-            if self.labelImageToSearch.imagePath:
+            labelImageToSearchList = self.gridWidgetImageToSearch.labelImageToSearchList
+            if (len(labelImageToSearchList) > 0
+                    and labelImageToSearchList[0].imagePath):
                 similar_img_model_multi_model_list, similar_img_model_all_text_list \
-                    = self.imgSearchService.search_by_img(self.labelImageToSearch.imagePath, cosine_similarity,
+                    = self.imgSearchService.search_by_img(labelImageToSearchList[0].imagePath, cosine_similarity,
                                                           ExhibitionPanel.MAX_SIMILAR_IMG_COUNT)
                 # 填充展示区图片
                 self.signalUpdateLabelImageSearchResultMultiModelMatrix.emit(similar_img_model_multi_model_list)
@@ -173,10 +155,13 @@ class ControlPanel(QWidget):
                 return
         except Exception as e:
             logger.error(e)
+        self.signalSwitchOverlay.emit(False)
 
     def on_click_push_button_search_by_text(self):
+        self.signalSwitchOverlay.emit(True)
         if self.textEditLlmToSearch.toPlainText():
             self.do_push_button_search_by_text(self.textEditLlmToSearch.toPlainText())
+        self.signalSwitchOverlay.emit(False)
 
     def do_push_button_search_by_text(self, text: str):
         self.signalSwitchOverlay.emit(True)
@@ -211,13 +196,17 @@ class ControlPanel(QWidget):
         if self.textEditLlmToSearch.toPlainText():
             ask_text = self.textEditLlmToSearch.toPlainText()
             # 启用UI
+            self.pushButtonSearchByImage.setEnabled(False)
             self.pushButtonSearchByText.setEnabled(False)
-            self.pushButtonSearchByText.setEnabled(False)
+            # 读取文本框中的问题
             self.textEditLlmHistory.append(f"提问: {ask_text}\n")
             self.textEditLlmToSearch.clear()
+
+            # 读取待检索的图片
+            image_path_list = [label.imagePath for label in self.gridWidgetImageToSearch.labelImageToSearchList if label.imagePath]
             self.textEditLlmHistory.append("回答: ")
             # 创建工作线程处理模型调用
-            self.llmThread = LlmThread(self.aiAgent, ask_text)
+            self.llmThread = LlmThread(self.aiAgent, ask_text, image_path_list)
             self.llmThread.model_token_generated.connect(self.on_model_token_generated)
             self.llmThread.finished.connect(self.on_model_finished)
             self.llmThread.error.connect(self.on_model_error)
@@ -244,7 +233,7 @@ class ControlPanel(QWidget):
 
     def end_model_answer(self):
         # 启用UI
-        self.pushButtonSearchByText.setEnabled(True)
+        self.pushButtonSearchByImage.setEnabled(True)
         self.pushButtonSearchByText.setEnabled(True)
 
         # 清理工作线程

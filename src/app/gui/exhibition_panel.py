@@ -4,11 +4,10 @@ Licensed under the Apache-2.0 License.
 For full terms, see the LICENSE file.  
 exhibition_panel.py
 """
-from PyQt5.QtCore import Qt, QMimeData, QByteArray
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QGridLayout, QFrame, QMenu, QApplication
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QGridLayout, QFrame
 
-from src.app.log.logger import logger
 from src.app.qt.image_label import ImageLabel
 
 
@@ -41,11 +40,10 @@ class ExhibitionPanel(QWidget):
             label_row = []
             for col in range(ExhibitionPanel.SIMILAR_IMG_COLS):
                 label = ImageLabel()
-                label.setFixedSize(150, 150)
+                label.setFixedSize(130, 130)
                 label.setStyleSheet("border: 1px solid black;")
                 label.setAlignment(Qt.AlignCenter)
                 label.setContextMenuPolicy(Qt.CustomContextMenu)
-                label.customContextMenuRequested.connect(self.on_show_context_menu)
                 self.gridLayoutMultiModel.addWidget(label, row, col)
                 label_row.append(label)
             self.labelImageSearchResultMultiModelMatrix.append(label_row)
@@ -67,11 +65,10 @@ class ExhibitionPanel(QWidget):
             label_row = []
             for col in range(ExhibitionPanel.SIMILAR_IMG_COLS):
                 label = ImageLabel()
-                label.setFixedSize(150, 150)
+                label.setFixedSize(130, 130)
                 label.setStyleSheet("border: 1px solid black;")
                 label.setAlignment(Qt.AlignCenter)
                 label.setContextMenuPolicy(Qt.CustomContextMenu)
-                label.customContextMenuRequested.connect(self.on_show_context_menu)
                 self.gridLayoutOcr.addWidget(label, row, col)
                 label_row.append(label)
             self.labelImageSearchResultOcrMatrix.append(label_row)
@@ -84,21 +81,7 @@ class ExhibitionPanel(QWidget):
 
         self.setLayout(self.vBoxLayoutExhibition)
 
-    def on_show_context_menu(self, pos):
-        image_label: ImageLabel = self.sender()
-        if not image_label.pixmap():
-            return
 
-        menu = QMenu()
-        copy_action = menu.addAction("复制图片")
-        action = menu.exec_(image_label.mapToGlobal(pos))
-
-        if action == copy_action:
-            clipboard = QApplication.clipboard()
-            q_mime_data = QMimeData()
-            q_mime_data.setData("text/uri-list", QByteArray(image_label.imageClipboardPath.encode('utf-8')))
-            logger.info("复制图片路径：%s", image_label.imageClipboardPath)
-            clipboard.setMimeData(q_mime_data)
 
     def clear_images(self):
         # 清空网格图片

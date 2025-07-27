@@ -6,18 +6,24 @@ image_label.py
 """
 import os
 
+from PyQt5.QtCore import Qt, QMimeData, QByteArray, pyqtSignal
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QLabel
-from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QLabel, QApplication, QMenu
+
+from src.app.log.logger import logger
 
 
 class ImageLabel(QLabel):
+    signal_delete_image = pyqtSignal()
+
     def __init__(self, *__args):
         super().__init__(*__args)
         self.setAlignment(Qt.AlignCenter)  # 居中显示
         self.originalPixmap = None
         self.imagePath = None
         self.imageClipboardPath = None
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.on_show_context_menu)
 
     def setPixmap(self, pixmap):
         self.originalPixmap = pixmap
@@ -48,3 +54,23 @@ class ImageLabel(QLabel):
             )
             super().setPixmap(scaled)
         super().resizeEvent(event)
+
+    def on_show_context_menu(self, pos):
+        logger.info("触发右键菜单")
+        image_label: ImageLabel = self.sender()
+        if not image_label.pixmap():
+            return
+
+        menu = QMenu()
+        copy_action = menu.addAction("复制图片")
+        delete_action = menu.addAction("删除图片")
+        action = menu.exec_(image_label.mapToGlobal(pos))
+
+        if action == copy_action:
+            clipboard = QApplication.clipboard()
+            q_mime_data = QMimeData()
+            q_mime_data.setData("text/uri-list", QByteArray(image_label.imageClipboardPath.encode('utf-8')))
+            logger.info("复制图片路径：%s", image_label.imageClipboardPath)
+            clipboard.setMimeData(q_mime_data)
+        elif action == delete_action:
+            self.signal_delete_image.emit()
