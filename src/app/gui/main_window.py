@@ -46,7 +46,7 @@ class MainWindow(QMainWindow):
         self.controlPanel.signalClearImages.connect(self.clear_images)
         self.controlPanel.signalUpdateLabelImageSearchResultMultiModelMatrix.connect(
             self.update_label_image_search_result_multi_model_matrix)
-        self.controlPanel.signalUpdateLabelImageSearchResultOcrMatrix.connect(self.update_label_image_search_result_ocr_matrix)
+        self.controlPanel.signalUpdateLabelImageSearchResultTextInfoMatrix.connect(self.update_label_image_search_result_text_info_matrix)
 
         self.splitterMain.addWidget(self.controlPanel)
         self.splitterMain.addWidget(self.exhibitionPanel)
@@ -77,10 +77,10 @@ class MainWindow(QMainWindow):
         logger.info("收到信号[clear_images]")
         self.exhibitionPanel.clear_images()
 
-    def update_label_image_search_result_multi_model_matrix(self, similar_img_model_multi_model_list):
+    def update_label_image_search_result_multi_model_matrix(self, similar_img_model_list):
         logger.info("收到信号[update_label_image_search_result_multi_model_matrix]")
-        self.exhibitionPanel.update_label_image_search_result_multi_model_matrix(similar_img_model_multi_model_list)
+        self.exhibitionPanel.update_label_image_search_result_multi_model_matrix(similar_img_model_list)
 
-    def update_label_image_search_result_ocr_matrix(self, similar_img_model_all_text_list):
-        logger.info("收到信号[update_label_image_search_result_ocr_matrix]")
-        self.exhibitionPanel.update_label_image_search_result_ocr_matrix(similar_img_model_all_text_list)
+    def update_label_image_search_result_text_info_matrix(self, similar_img_model_list):
+        logger.info("收到信号[update_label_image_search_result_text_info_matrix]")
+        self.exhibitionPanel.update_label_image_search_result_text_info_matrix(similar_img_model_list)

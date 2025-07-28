@@ -7,6 +7,8 @@ run.py
 import logging.config
 import os
 
+from dotenv import load_dotenv
+
 LOGGING_CONFIG = {
     "version": 1,
     "formatters": {
@@ -34,6 +36,7 @@ LOGGING_CONFIG = {
 }
 
 if __name__ == '__main__':
+    load_dotenv()
     log_dir = "logs"
     os.makedirs(log_dir, exist_ok=True)
 
@@ -44,4 +47,4 @@ if __name__ == '__main__':
 
         run()
     except Exception as e:
-        logging.error(e)
+        logging.error(e, exc_info=True)

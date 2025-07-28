@@ -15,6 +15,7 @@ from src.app.log.logger import logger
 
 class ImageLabel(QLabel):
     signal_delete_image = pyqtSignal()
+    signal_mark = pyqtSignal()
 
     def __init__(self, *__args):
         super().__init__(*__args)
@@ -22,6 +23,7 @@ class ImageLabel(QLabel):
         self.originalPixmap = None
         self.imagePath = None
         self.imageClipboardPath = None
+        self.fileSha256 = None
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.on_show_context_menu)
 
@@ -38,8 +40,12 @@ class ImageLabel(QLabel):
         self.imagePath = image_path
         self.imageClipboardPath = "file:///" + os.path.abspath(image_path).replace('\\', '/')
 
+    def setFileSha256(self, file_sha256):
+        self.fileSha256 = file_sha256
+
     def clear(self):
         self.originalPixmap = None
+        self.imagePath = None
         self.imageClipboardPath = None
         super().clear()
 
@@ -64,7 +70,8 @@ class ImageLabel(QLabel):
         menu = QMenu()
         copy_action = menu.addAction("复制图片")
         delete_action = menu.addAction("删除图片")
-        action = menu.exec_(image_label.mapToGlobal(pos))
+        mark_action = menu.addAction("打标...")
+        action = menu.exec(image_label.mapToGlobal(pos))
 
         if action == copy_action:
             clipboard = QApplication.clipboard()
@@ -74,3 +81,5 @@ class ImageLabel(QLabel):
             clipboard.setMimeData(q_mime_data)
         elif action == delete_action:
             self.signal_delete_image.emit()
+        elif action == mark_action:
+            self.signal_mark.emit()
