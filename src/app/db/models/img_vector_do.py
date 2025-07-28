@@ -19,11 +19,12 @@ class ImgVectorDO(Base):
     file_gmt_modified = Column(TIMESTAMP)
     file_name = Column(String)
     file_sha256 = Column(String)
-    img_vec = Column(String)
+
     ocr_text = Column(String)
-    ocr_text_sentence_vec = Column(String)
     tag_text = Column(String)
-    tag_text_vec = Column(String)
+
+    img_vec = Column(String)
     all_text_vec = Column(String)
+    all_in_one_vec = Column(String)
 
     cosine_distance = None

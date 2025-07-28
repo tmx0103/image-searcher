@@ -33,5 +33,5 @@ class SearchThread(QThread):
             logger.info(similar_img_model_all_text_list)
             self.finished.emit()
         except Exception as e:
-            logger.error(e)
+            logger.error(e, exc_info=True)
             self.error.emit()

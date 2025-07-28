@@ -28,7 +28,7 @@ class QwenEmbedding:
         self.tokenizer = AutoTokenizer.from_pretrained(self.modelName)
         self.model = AutoModel.from_pretrained(self.modelName).to("cuda").eval()
 
-    def embed_to_vec(self, text: str):
+    def embed_to_vector(self, text: str):
         tokenized_text = self.tokenizer([text], padding=True, truncation=True,
                                         max_length=10240, return_tensors="pt").to("cuda")
         with torch.no_grad():
@@ -40,5 +40,5 @@ class QwenEmbedding:
 
 if __name__ == "__main__":
     qwen_embedding = QwenEmbedding()
-    embedding = qwen_embedding.embed_to_vec("")
+    embedding = qwen_embedding.embed_to_vector("")
     print(embedding)

@@ -69,7 +69,7 @@ if __name__ == "__main__":
                     if img_vector_do.tag_text is not None and img_vector_do.tag_text != "":
                         text_to_embed += "自定义标签：" + img_vector_do.tag_text
                     logger.info(f"处理：{text_to_embed}")
-                    all_text_vec = qwen_embedding.embed_to_vec(text_to_embed)
+                    all_text_vec = qwen_embedding.embed_to_vector(text_to_embed)
                     all_text_vec_str = "[" + ",".join([str(x) for x in all_text_vec]) + "]"
                     img_vector_mapper.update_all_text_vec_by_file_sha256(file_sha256, all_text_vec_str)
                     logger.info(f"已完成处理：{file_relative_path}")

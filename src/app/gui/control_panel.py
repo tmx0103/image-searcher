@@ -23,7 +23,7 @@ class ControlPanel(QWidget):
     signalSwitchOverlay = pyqtSignal(bool)
     signalClearImages = pyqtSignal()
     signalUpdateLabelImageSearchResultMultiModelMatrix = pyqtSignal(list)
-    signalUpdateLabelImageSearchResultOcrMatrix = pyqtSignal(list)
+    signalUpdateLabelImageSearchResultTextInfoMatrix = pyqtSignal(list)
 
     def __init__(self):
         super().__init__()
@@ -41,7 +41,7 @@ class ControlPanel(QWidget):
         # -滚动布局：待检索图片区域
         # -大模型检索文本框
         # -左右布局：新增图片按钮、清除历史、提问/停止
-        # -左右布局：直接用文本检索、直接用图片检索
+        # -左右布局：直接用文本检索、直接用图片检索、图文结合搜索
         #####################################
         # 控制区（上下布局）
         self.vBoxLayoutControl = QVBoxLayout()
@@ -102,9 +102,15 @@ class ControlPanel(QWidget):
         self.pushButtonSearchByImage.setStyleSheet("font-size: 12pt;font-family: 微软雅黑;")
         self.pushButtonSearchByImage.setFixedHeight(30)
         self.pushButtonSearchByImage.clicked.connect(self.on_click_push_button_search_by_image)
+        # --图文结合搜索
+        self.pushButtonSearchByTextAndImage = QPushButton("图文结合搜索")
+        self.pushButtonSearchByTextAndImage.setStyleSheet("font-size: 12pt;font-family: 微软雅黑;")
+        self.pushButtonSearchByTextAndImage.setFixedHeight(30)
+        self.pushButtonSearchByTextAndImage.clicked.connect(self.on_click_push_button_search_by_text_and_image)
 
         self.hBoxLayoutSearchDirectLy.addWidget(self.pushButtonSearchByText)
         self.hBoxLayoutSearchDirectLy.addWidget(self.pushButtonSearchByImage)
+        self.hBoxLayoutSearchDirectLy.addWidget(self.pushButtonSearchByTextAndImage)
 
         self.vBoxLayoutControl.addWidget(self.labelTitleSearchByLlm)
         self.vBoxLayoutControl.addWidget(self.textEditLlmHistory)
@@ -135,32 +141,43 @@ class ControlPanel(QWidget):
             labelImageToSearch.setImagePath(file_path)
             self.gridWidgetImageToSearch.add_widget(labelImageToSearch)
 
+    def on_click_push_button_search_by_text(self):
+        if self.textEditLlmToSearch.toPlainText():
+            self.do_push_button_search_by_text(self.textEditLlmToSearch.toPlainText())
+
     def on_click_push_button_search_by_image(self):
         self.signalSwitchOverlay.emit(True)
-        # 清空展示区图片
         self.signalClearImages.emit()
         cosine_similarity = 0.0
         try:
             labelImageToSearchList = self.gridWidgetImageToSearch.labelImageToSearchList
-            if (len(labelImageToSearchList) > 0
-                    and labelImageToSearchList[0].imagePath):
+            if len(labelImageToSearchList) > 0 and labelImageToSearchList[0].imagePath:
                 similar_img_model_multi_model_list, similar_img_model_all_text_list \
                     = self.imgSearchService.search_by_img(labelImageToSearchList[0].imagePath, cosine_similarity,
                                                           ExhibitionPanel.MAX_SIMILAR_IMG_COUNT)
                 # 填充展示区图片
                 self.signalUpdateLabelImageSearchResultMultiModelMatrix.emit(similar_img_model_multi_model_list)
-                self.signalUpdateLabelImageSearchResultOcrMatrix.emit(similar_img_model_all_text_list)
-
-            else:
-                return
+                self.signalUpdateLabelImageSearchResultTextInfoMatrix.emit(similar_img_model_all_text_list)
         except Exception as e:
-            logger.error(e)
+            logger.error(e, exc_info=True)
         self.signalSwitchOverlay.emit(False)
 
-    def on_click_push_button_search_by_text(self):
+    def on_click_push_button_search_by_text_and_image(self):
         self.signalSwitchOverlay.emit(True)
-        if self.textEditLlmToSearch.toPlainText():
-            self.do_push_button_search_by_text(self.textEditLlmToSearch.toPlainText())
+        self.signalClearImages.emit()
+        cosine_similarity = 0.0
+        try:
+            labelImageToSearchList = self.gridWidgetImageToSearch.labelImageToSearchList
+            if len(labelImageToSearchList) > 0 and labelImageToSearchList[0].imagePath and self.textEditLlmToSearch.toPlainText():
+                similar_img_model_multi_model_list, similar_img_model_all_text_list \
+                    = self.imgSearchService.search_by_text_and_img(labelImageToSearchList[0].imagePath,
+                                                                   self.textEditLlmToSearch.toPlainText(),
+                                                                   cosine_similarity, ExhibitionPanel.MAX_SIMILAR_IMG_COUNT)
+                # 填充展示区图片
+                self.signalUpdateLabelImageSearchResultMultiModelMatrix.emit(similar_img_model_multi_model_list)
+                self.signalUpdateLabelImageSearchResultTextInfoMatrix.emit(similar_img_model_all_text_list)
+        except Exception as e:
+            logger.error(e, exc_info=True)
         self.signalSwitchOverlay.emit(False)
 
     def do_push_button_search_by_text(self, text: str):
@@ -177,7 +194,7 @@ class ControlPanel(QWidget):
         similar_img_model_multi_model_list = search_thread.similar_img_model_multi_model_list
         similar_img_model_all_text_list = search_thread.similar_img_model_all_text_list
         self.signalUpdateLabelImageSearchResultMultiModelMatrix.emit(similar_img_model_multi_model_list)
-        self.signalUpdateLabelImageSearchResultOcrMatrix.emit(similar_img_model_all_text_list)
+        self.signalUpdateLabelImageSearchResultTextInfoMatrix.emit(similar_img_model_all_text_list)
         self.signalSwitchOverlay.emit(False)
 
     def on_signal_start_img_search_by_text(self, text: str):
@@ -186,7 +203,7 @@ class ControlPanel(QWidget):
     def update_all_label_image_search_result_matrix(self, similar_img_model_multi_model_list, similar_img_model_all_text_list):
         self.signalClearImages.emit()
         self.signalUpdateLabelImageSearchResultMultiModelMatrix.emit(similar_img_model_multi_model_list)
-        self.signalUpdateLabelImageSearchResultOcrMatrix.emit(similar_img_model_all_text_list)
+        self.signalUpdateLabelImageSearchResultTextInfoMatrix.emit(similar_img_model_all_text_list)
 
     def on_click_push_button_clear_llm_history(self):
         self.textEditLlmHistory.clear()
