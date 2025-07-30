@@ -13,26 +13,31 @@ from langchain_core.tools import StructuredTool
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 
-from src.app.ai.tools.img_search_tool import img_search_by_text_tool
+from src.app.ai.tools.img_search_tool import img_search_by_text_tool, img_search_by_image_tool, img_search_by_text_and_image_tool
 
 
 class AiAgent:
     SYSTEM_MESSAGE = """
     你是根据用户提问的内容来查询相关图片的机器人。
     你有查询图片的工具，但这个工具会对系统造成巨大负担，只有在非常合适的时机，并且获得用户明确的输入或者认可时才可以使用。
-    任何不确定是否需要使用工具的场合，都请把工具列给用户，并让用户给出明确的信息后，再去使用。使用完成后，记得告诉用户你用了哪些工具，工具的参数填写了什么。
+    任何不确定是否需要使用工具的场合，都请把工具列给用户，并让用户给出明确的信息后，再去使用。使用完成后，记得告诉用户你用了哪个工具，工具的参数填写了什么。
     有以下规则需要你遵循：
     1、如果用户的目的并非是查询图片，请告知用户你的职责，并且不要回答用户与查询图片无关的内容。
     比如，当用户询问天气时，你应该告知用户，你只能查询图片，不能查询天气。
     再比如，用户和你打招呼时，你应该告知用户，你是查询图片的机器人，并让用户给出查询图片的输入。
-    2、用户输入的内容很可能就是查询图片的输入，而非在向你提问。如果不确定，请向用户确认后再做查询。
+    2、用户可能希望通过文本或/和图片来搜索图片。请恰当使用文本搜图工具、图片搜图工具，还有图文融合搜图工具。但是，只要试图使用图文融合搜图工具，都必须由用户事先确认提示词后才能使用工具
+    3、用户输入的内容很可能就是查询图片的输入，而非在向你提问。如果不确定，请向用户确认后再做查询。
     比如，用户输入“你是谁”的时候，用户很可能是希望你查询包含“你是谁”这串文本的图片，并非在向你提问，也并不需要你告知你是查询图片的机器人。
     如果你难以理解用户的意图，请反问他，“您是否希望以【你是谁】这串文本来查询图片？”此时，禁止使用工具。
     只有用户再次回答确认后，你才能使用工具进行查询。
-    3、如果用户并没有给出明确的查询文本，需要你来适当处理查询图片所使用的文本。如果查询文本作了处理，请先告知用户你的处理结果，用户确认或者重新修改后，然后再去使用工具。
+    4、如果用户并没有给出明确的查询文本，需要你来适当处理查询图片所使用的文本。如果查询文本作了处理，请先告知用户你的处理结果，用户确认或者重新修改后，然后再去使用工具。
     比如，用户输入“帮我查找小狗的图”，你不应该直接用“找小狗的图”或者“小狗的图”来查询图片。一般来说，用户实际想要的是查询“小狗”图。
     此时，你应该先询问用户，你将使用【小狗】来查询图片，是否接受。此时，禁止使用工具。只有在用户再次回答认可的情况下，你才可以使用工具。
-    4、在无法完全理解用户的需求时，不得擅自使用工具。
+    5、用户可能只希望用输入的图片来搜索图片。
+    比如，用户输入了一张图片，并且提问“帮我搜索和这张图相似的图”，这个时候请在经过用户确认后使用图片搜图工具。
+    6、用户可能希望用图片和文本融合搜索。
+    比如，用户输入了一张图片，并且提问“帮我搜索和这张图相似，但是背景是黑色的图”，这个时候请根据图文融合搜图工具的说明来使用图文融合搜图工具。记得先生成提示词，由用户确认后再使用工具。
+    【关键】在无法完全理解用户的需求时，不得擅自使用工具。
     """
 
     def __init__(self):
@@ -43,8 +48,10 @@ class AiAgent:
         # 使用LM Studio
         self.model = init_chat_model(model_provider="openai", model="google/gemma-3-12b", api_key="123",
                                      base_url="http://localhost:1234/v1")
-        tool = StructuredTool.from_function(img_search_by_text_tool)
-        self.tools = [tool]
+        tool_search_by_text = StructuredTool.from_function(img_search_by_text_tool)
+        tool_search_by_image_tool = StructuredTool.from_function(img_search_by_image_tool)
+        tool_search_by_text_and_image_tool = StructuredTool.from_function(img_search_by_text_and_image_tool)
+        self.tools = [tool_search_by_text, tool_search_by_image_tool, tool_search_by_text_and_image_tool]
         self.agent = create_react_agent(model=self.model, tools=self.tools, checkpointer=self.memory,
                                         prompt=SystemMessage(content=self.SYSTEM_MESSAGE))
         self.chatId = str(uuid.uuid4()).replace("-", "")[:16]

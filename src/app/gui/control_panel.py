@@ -15,7 +15,9 @@ from src.app.gui.grid_widget_image_to_search import GridWidgetImageToSearch
 from src.app.log.logger import logger
 from src.app.qt.image_label import ImageLabel
 from src.app.qt.llm_thread import LlmThread
-from src.app.qt.search_thread import SearchThread
+from src.app.qt.search_by_img_thread import SearchByImgThread
+from src.app.qt.search_by_text_and_img_thread import SearchByTextAndImgThread
+from src.app.qt.search_by_text_thread import SearchByTextThread
 from src.app.service.img_search_service import ImgSearchService
 
 
@@ -31,9 +33,13 @@ class ControlPanel(QWidget):
         self.imgSearchService = ImgSearchService.get_instance()
 
         self.llmThread = None
-        self.searchThread = None
+        self.searchByTextThread = None
+        self.searchByImgThread = None
+        self.searchByTextAndImgThread = None
         self.imgSearchTool = ImgSearchTool.get_instance()
-        self.imgSearchTool.signal_start_img_search.connect(self.on_signal_start_img_search_by_text)
+        self.imgSearchTool.signal_start_img_search_by_text.connect(self.on_signal_start_img_search_by_text)
+        self.imgSearchTool.signal_start_img_search_by_img.connect(self.on_signal_start_img_search_by_img)
+        self.imgSearchTool.signal_start_img_search_by_text_and_img.connect(self.on_signal_start_img_search_by_text_and_img)
         #####################################
         # 控制区结构
         # -标签：检索
@@ -141,62 +147,6 @@ class ControlPanel(QWidget):
             labelImageToSearch.setImagePath(file_path)
             self.gridWidgetImageToSearch.add_widget(labelImageToSearch)
 
-    def on_click_push_button_search_by_text(self):
-        if self.textEditLlmToSearch.toPlainText():
-            self.do_push_button_search_by_text(self.textEditLlmToSearch.toPlainText())
-
-    def on_click_push_button_search_by_image(self):
-        self.signalSwitchOverlay.emit(True)
-        self.signalClearImages.emit()
-        cosine_similarity = 0.0
-        try:
-            labelImageToSearchList = self.gridWidgetImageToSearch.labelImageToSearchList
-            if len(labelImageToSearchList) > 0 and labelImageToSearchList[0].imagePath:
-                similar_img_model_multi_model_list, similar_img_model_all_text_list \
-                    = self.imgSearchService.search_by_img(labelImageToSearchList[0].imagePath, cosine_similarity,
-                                                          ExhibitionPanel.MAX_SIMILAR_IMG_COUNT)
-                # 填充展示区图片
-                self.signalUpdateLabelImageSearchResultMultiModelMatrix.emit(similar_img_model_multi_model_list)
-                self.signalUpdateLabelImageSearchResultTextInfoMatrix.emit(similar_img_model_all_text_list)
-        except Exception as e:
-            logger.error(e, exc_info=True)
-        self.signalSwitchOverlay.emit(False)
-
-    def on_click_push_button_search_by_text_and_image(self):
-        self.signalSwitchOverlay.emit(True)
-        self.signalClearImages.emit()
-        cosine_similarity = 0.0
-        try:
-            labelImageToSearchList = self.gridWidgetImageToSearch.labelImageToSearchList
-            if len(labelImageToSearchList) > 0 and labelImageToSearchList[0].imagePath and self.textEditLlmToSearch.toPlainText():
-                similar_img_model_multi_model_list, similar_img_model_all_text_list, mixed_image_path \
-                    = self.imgSearchService.search_by_text_and_img(labelImageToSearchList[0].imagePath,
-                                                                   self.textEditLlmToSearch.toPlainText(),
-                                                                   cosine_similarity, ExhibitionPanel.MAX_SIMILAR_IMG_COUNT)
-                text_cursor: QTextCursor = self.textEditLlmHistory.textCursor()
-                text_cursor.movePosition(QTextCursor.End)
-                text_cursor.insertText(f"图文融合提示词: {self.textEditLlmToSearch.toPlainText()}\n")
-                text_cursor.insertText(f"已生成图文融合图:\n")
-                image = QImage(mixed_image_path)
-                image = image.scaledToHeight(150)
-                text_cursor.insertImage(image)
-                text_cursor.insertText("\n")
-                # 填充展示区图片
-                self.signalUpdateLabelImageSearchResultMultiModelMatrix.emit(similar_img_model_multi_model_list)
-                self.signalUpdateLabelImageSearchResultTextInfoMatrix.emit(similar_img_model_all_text_list)
-        except Exception as e:
-            logger.error(e, exc_info=True)
-        self.signalSwitchOverlay.emit(False)
-
-    def do_push_button_search_by_text(self, text: str):
-        self.signalSwitchOverlay.emit(True)
-        self.signalClearImages.emit()
-        cosine_similarity = 0.0
-        # 创建工作线程处理查询请求
-        self.searchThread = SearchThread(text, cosine_similarity, ExhibitionPanel.MAX_SIMILAR_IMG_COUNT)
-        self.searchThread.finished.connect(lambda search_thread=self.searchThread: self.on_signal_search_finished(search_thread))
-        self.searchThread.start()
-
     def on_signal_search_finished(self, search_thread):
         logger.info("搜索完成")
         similar_img_model_multi_model_list = search_thread.similar_img_model_multi_model_list
@@ -207,6 +157,73 @@ class ControlPanel(QWidget):
 
     def on_signal_start_img_search_by_text(self, text: str):
         self.do_push_button_search_by_text(text)
+
+    def on_signal_start_img_search_by_img(self):
+        self.do_push_button_search_by_img()
+
+    def on_signal_start_img_search_by_text_and_img(self, text: str):
+        self.do_push_button_search_by_text_and_img(text)
+
+    def on_click_push_button_search_by_text(self):
+        if self.textEditLlmToSearch.toPlainText():
+            self.do_push_button_search_by_text(self.textEditLlmToSearch.toPlainText())
+
+    def on_click_push_button_search_by_image(self):
+        label_image_to_search_list = self.gridWidgetImageToSearch.labelImageToSearchList
+        if len(label_image_to_search_list) > 0 and label_image_to_search_list[0].imagePath:
+            self.do_push_button_search_by_img()
+
+    def on_click_push_button_search_by_text_and_image(self):
+        label_image_to_search_list = self.gridWidgetImageToSearch.labelImageToSearchList
+        if (len(label_image_to_search_list) > 0 and label_image_to_search_list[0].imagePath
+                and self.textEditLlmToSearch.toPlainText()):
+            self.do_push_button_search_by_text_and_img(self.textEditLlmToSearch.toPlainText())
+
+    def do_push_button_search_by_text(self, text: str):
+        self.signalSwitchOverlay.emit(True)
+        self.signalClearImages.emit()
+        cosine_similarity = 0.0
+        # 创建工作线程处理查询请求
+        self.searchByTextThread = SearchByTextThread(text, cosine_similarity, ExhibitionPanel.MAX_SIMILAR_IMG_COUNT)
+        self.searchByTextThread.finished.connect(
+            lambda search_thread=self.searchByTextThread: self.on_signal_search_finished(search_thread))
+        self.searchByTextThread.start()
+
+    def do_push_button_search_by_img(self):
+        self.signalSwitchOverlay.emit(True)
+        self.signalClearImages.emit()
+        cosine_similarity = 0.0
+        label_image_to_search_list = self.gridWidgetImageToSearch.labelImageToSearchList
+
+        # 创建工作线程处理查询请求
+        self.searchByImgThread = SearchByImgThread(label_image_to_search_list[0].imagePath, cosine_similarity,
+                                                   ExhibitionPanel.MAX_SIMILAR_IMG_COUNT)
+        self.searchByImgThread.finished.connect(lambda search_thread=self.searchByImgThread: self.on_signal_search_finished(search_thread))
+        self.searchByImgThread.start()
+
+    def do_push_button_search_by_text_and_img(self, text: str):
+        self.signalSwitchOverlay.emit(True)
+        self.signalClearImages.emit()
+        cosine_similarity = 0.0
+        label_image_to_search_list = self.gridWidgetImageToSearch.labelImageToSearchList
+        # 创建工作线程处理查询请求
+        self.searchByTextAndImgThread = SearchByTextAndImgThread(label_image_to_search_list[0].imagePath, text, cosine_similarity,
+                                                                 ExhibitionPanel.MAX_SIMILAR_IMG_COUNT)
+        self.searchByTextAndImgThread.signal_mixed_img_generated.connect(self.on_signal_mixed_img_generated)
+        self.searchByTextAndImgThread.finished.connect(
+            lambda search_thread=self.searchByTextAndImgThread: self.on_signal_search_finished(search_thread))
+        self.searchByTextAndImgThread.start()
+
+    def on_signal_mixed_img_generated(self, text, mixed_image_path):
+        text_cursor: QTextCursor = self.textEditLlmHistory.textCursor()
+        text_cursor.movePosition(QTextCursor.End)
+        text_cursor.insertText("\n==========\n")
+        text_cursor.insertText(f"图文融合提示词: {text}\n")
+        text_cursor.insertText(f"已生成图文融合图:\n")
+        image = QImage(mixed_image_path)
+        image = image.scaledToHeight(150)
+        text_cursor.insertImage(image)
+        text_cursor.insertText("\n==========\n")
 
     def update_all_label_image_search_result_matrix(self, similar_img_model_multi_model_list, similar_img_model_all_text_list):
         self.signalClearImages.emit()
