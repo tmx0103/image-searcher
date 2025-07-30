@@ -5,7 +5,7 @@ For full terms, see the LICENSE file.
 control_panel.py
 """
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QPixmap, QTextCursor
+from PyQt5.QtGui import QPixmap, QTextCursor, QImage
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QTextEdit, QHBoxLayout, QPushButton, QFileDialog, QScrollArea
 
 from src.app.ai.ai_agent import AiAgent
@@ -169,10 +169,18 @@ class ControlPanel(QWidget):
         try:
             labelImageToSearchList = self.gridWidgetImageToSearch.labelImageToSearchList
             if len(labelImageToSearchList) > 0 and labelImageToSearchList[0].imagePath and self.textEditLlmToSearch.toPlainText():
-                similar_img_model_multi_model_list, similar_img_model_all_text_list \
+                similar_img_model_multi_model_list, similar_img_model_all_text_list, mixed_image_path \
                     = self.imgSearchService.search_by_text_and_img(labelImageToSearchList[0].imagePath,
                                                                    self.textEditLlmToSearch.toPlainText(),
                                                                    cosine_similarity, ExhibitionPanel.MAX_SIMILAR_IMG_COUNT)
+                text_cursor: QTextCursor = self.textEditLlmHistory.textCursor()
+                text_cursor.movePosition(QTextCursor.End)
+                text_cursor.insertText(f"图文融合提示词: {self.textEditLlmToSearch.toPlainText()}\n")
+                text_cursor.insertText(f"已生成图文融合图:\n")
+                image = QImage(mixed_image_path)
+                image = image.scaledToHeight(150)
+                text_cursor.insertImage(image)
+                text_cursor.insertText("\n")
                 # 填充展示区图片
                 self.signalUpdateLabelImageSearchResultMultiModelMatrix.emit(similar_img_model_multi_model_list)
                 self.signalUpdateLabelImageSearchResultTextInfoMatrix.emit(similar_img_model_all_text_list)
@@ -216,12 +224,21 @@ class ControlPanel(QWidget):
             self.pushButtonSearchByImage.setEnabled(False)
             self.pushButtonSearchByText.setEnabled(False)
             # 读取文本框中的问题
-            self.textEditLlmHistory.append(f"提问: {ask_text}\n")
+            text_cursor: QTextCursor = self.textEditLlmHistory.textCursor()
+            text_cursor.movePosition(QTextCursor.End)
+            text_cursor.insertText(f"提问: {ask_text}\n")
             self.textEditLlmToSearch.clear()
 
             # 读取待检索的图片
-            image_path_list = [label.imagePath for label in self.gridWidgetImageToSearch.labelImageToSearchList if label.imagePath]
-            self.textEditLlmHistory.append("回答: ")
+            image_path_list = []
+            for label in self.gridWidgetImageToSearch.labelImageToSearchList:
+                if label.imagePath:
+                    image_path_list.append(label.imagePath)
+                    image = QImage(label.imagePath)
+                    image = image.scaledToHeight(150)
+                    text_cursor.insertImage(image)
+                    text_cursor.insertText("\n")
+            text_cursor.insertText("\n回答: ")
             # 创建工作线程处理模型调用
             self.llmThread = LlmThread(self.aiAgent, ask_text, image_path_list)
             self.llmThread.model_token_generated.connect(self.on_model_token_generated)

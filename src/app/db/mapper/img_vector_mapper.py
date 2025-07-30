@@ -10,6 +10,7 @@ from sqlalchemy import text, bindparam
 from sqlalchemy.orm import Session
 
 from src.app.db.models import ImgVectorDO
+from src.app.db.models.img_vector_result import ImgVectorResult
 
 
 class ImgVectorMapper:
@@ -50,18 +51,6 @@ class ImgVectorMapper:
                    ORDER BY all_text_vec <=> :query_vec
                    LIMIT :limit
                    """)
-        self.sql_template_all_in_one_vector_search \
-            = text("""
-                   SELECT id,
-                          file_dir,
-                          file_name,
-                          file_sha256,
-                          all_in_one_vec <=> :query_vec AS cosine_distance
-                   FROM dev.tb_img_vector
-                   WHERE all_in_one_vec <=> :query_vec < :max_cosine_distance
-                   ORDER BY all_in_one_vec <=> :query_vec
-                   LIMIT :limit
-                   """)
 
     def insert(self, file_dir, file_name, file_sha256, img_vector, ocr_text):
         img_vector_do = ImgVectorDO()
@@ -100,54 +89,36 @@ class ImgVectorMapper:
         self.session.query(ImgVectorDO).filter(ImgVectorDO.file_sha256 == file_sha256).update({ImgVectorDO.tag_text: tag_text})
         self.session.commit()
 
-
     def update_all_text_vec_by_file_sha256(self, file_sha256, all_text_vec):
         self.session.query(ImgVectorDO).filter(ImgVectorDO.file_sha256 == file_sha256).update(
             {ImgVectorDO.all_text_vec: all_text_vec})
         self.session.commit()
 
-    def update_all_in_one_vec_by_file_sha256(self, file_sha256, all_in_one_vec):
-        self.session.query(ImgVectorDO).filter(ImgVectorDO.file_sha256 == file_sha256).update({ImgVectorDO.all_in_one_vec: all_in_one_vec})
-        self.session.commit()
-
     def search(self, img_vector: str, cosine_similarity: float, limit: int):
         max_cosine_distance = 1 - cosine_similarity
-        orm_sql = self.session.query(ImgVectorDO).from_statement(
-            self.sql_template_img_vector_search.bindparams(
-                bindparam("query_vec", value=img_vector),
-                bindparam("max_cosine_distance", value=max_cosine_distance),
-                bindparam("limit", value=limit))
-            .columns(ImgVectorDO.id, ImgVectorDO.file_dir, ImgVectorDO.file_name, ImgVectorDO.file_sha256, ImgVectorDO.cosine_distance)
-        )
-        return orm_sql.all()
+        execute_result = self.session.execute(self.sql_template_img_vector_search.bindparams(
+            bindparam("query_vec", value=img_vector),
+            bindparam("max_cosine_distance", value=max_cosine_distance),
+            bindparam("limit", value=limit))).mappings().all()
+
+        result = [ImgVectorResult(**row) for row in execute_result]
+        return result
 
     def search_by_text(self, search_text: str, limit: int):
-        orm_sql = self.session.query(ImgVectorDO).from_statement(
-            self.sql_template_text_search.bindparams(
-                bindparam("search_text", value=search_text),
-                bindparam("limit", value=limit))
-            .columns(ImgVectorDO.id, ImgVectorDO.file_dir, ImgVectorDO.file_name, ImgVectorDO.file_sha256)
-        )
-        return orm_sql.all()
+        execute_result = self.session.execute(self.sql_template_text_search.bindparams(
+            bindparam("search_text", value=search_text),
+            bindparam("limit", value=limit))).mappings().all()
+
+        result = [ImgVectorResult(**row) for row in execute_result]
+        return result
 
     def search_by_all_text_vector(self, text_vector: str, cosine_similarity: float, limit: int):
         max_cosine_distance = 1 - cosine_similarity
-        orm_sql = self.session.query(ImgVectorDO).from_statement(
-            self.sql_template_all_text_vector_search.bindparams(
-                bindparam("query_vec", value=text_vector),
-                bindparam("max_cosine_distance", value=max_cosine_distance),
-                bindparam("limit", value=limit))
-            .columns(ImgVectorDO.id, ImgVectorDO.file_dir, ImgVectorDO.file_name, ImgVectorDO.file_sha256, ImgVectorDO.cosine_distance)
-        )
-        return orm_sql.all()
 
-    def search_by_all_in_one_vector(self, all_in_one_vector: str, cosine_similarity: float, limit: int):
-        max_cosine_distance = 1 - cosine_similarity
-        orm_sql = self.session.query(ImgVectorDO).from_statement(
-            self.sql_template_all_in_one_vector_search.bindparams(
-                bindparam("query_vec", value=all_in_one_vector),
-                bindparam("max_cosine_distance", value=max_cosine_distance),
-                bindparam("limit", value=limit))
-            .columns(ImgVectorDO.id, ImgVectorDO.file_dir, ImgVectorDO.file_name, ImgVectorDO.file_sha256, ImgVectorDO.cosine_distance)
-        )
-        return orm_sql.all()
+        execute_result = self.session.execute(self.sql_template_all_text_vector_search.bindparams(
+            bindparam("query_vec", value=text_vector),
+            bindparam("max_cosine_distance", value=max_cosine_distance),
+            bindparam("limit", value=limit))).mappings().all()
+
+        result = [ImgVectorResult(**row) for row in execute_result]
+        return result

@@ -24,6 +24,7 @@ class ImageLabel(QLabel):
         self.imagePath = None
         self.imageClipboardPath = None
         self.fileSha256 = None
+        self.cosineSimilarity = None
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.on_show_context_menu)
 
@@ -42,6 +43,9 @@ class ImageLabel(QLabel):
 
     def setFileSha256(self, file_sha256):
         self.fileSha256 = file_sha256
+
+    def setCosineSimilarity(self, cosine_similarity):
+        self.cosineSimilarity = cosine_similarity
 
     def clear(self):
         self.originalPixmap = None
@@ -68,6 +72,8 @@ class ImageLabel(QLabel):
             return
 
         menu = QMenu()
+        if image_label.cosineSimilarity:
+            menu.addAction(f"相似度: {image_label.cosineSimilarity:.2f}")
         copy_action = menu.addAction("复制图片")
         delete_action = menu.addAction("删除图片")
         mark_action = menu.addAction("打标...")

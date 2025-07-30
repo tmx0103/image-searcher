@@ -12,7 +12,8 @@ from dotenv import load_dotenv
 LOGGING_CONFIG = {
     "version": 1,
     "formatters": {
-        "standard_formatter": {"format": "%(asctime)s [%(levelname)s] [%(threadName)s]-%(name)s %(module)s:%(lineno)d - %(message)s"}},
+        "standard_formatter": {"format": "%(asctime)s [%(levelname)s] [%(threadName)s]-%(name)s %(module)s:%(lineno)d - %(message)s"}
+    },
     "handlers": {
         "file": {
             "class": "logging.handlers.RotatingFileHandler",

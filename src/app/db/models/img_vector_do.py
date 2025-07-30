@@ -25,6 +25,3 @@ class ImgVectorDO(Base):
 
     img_vec = Column(String)
     all_text_vec = Column(String)
-    all_in_one_vec = Column(String)
-
-    cosine_distance = None
