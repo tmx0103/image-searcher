@@ -7,7 +7,6 @@ img_search_service.py
 import os
 from threading import Lock
 
-import numpy as np
 from PIL import Image
 from numpy import ndarray
 from sqlalchemy import create_engine
@@ -16,6 +15,7 @@ from sqlalchemy.orm import sessionmaker
 from src.app.ai.chinese_clip import ChineseClip
 from src.app.ai.paddle_ocr_util import PaddleOCRUtil
 from src.app.ai.qwen_embedding import QwenEmbedding
+from src.app.ai.stable_diffusion import StableDiffusion
 from src.app.db.mapper.img_vector_mapper import ImgVectorMapper
 from src.app.db.models.similar_img_models import SimilarImgModel
 from src.app.utils.string_util import StringUtil
@@ -38,6 +38,7 @@ class ImgSearchService:
         self.chineseClip = ChineseClip.get_instance()
         self.ocrUtil = PaddleOCRUtil.get_instance()
         self.qwenEmbedding = QwenEmbedding.get_instance()
+        self.sd = StableDiffusion.get_instance()
         self.engine = create_engine(f"postgresql://"
                                     f"{os.getenv('POSTGRESQL_USER')}:{os.getenv('POSTGRESQL_PASSWORD')}"
                                     f"@{os.getenv('POSTGRESQL_HOST')}:{os.getenv('POSTGRESQL_PORT')}/{os.getenv('POSTGRESQL_DB')}")
@@ -103,28 +104,25 @@ class ImgSearchService:
             return similar_img_model_multi_model_list, similar_img_model_all_text_list
 
     def search_by_text_and_img(self, img_file_path: str, text: str, cosine_similarity: float, img_count: int):
+        # 生成图文融合的新图
+        mixed_img_file_path = self.sd.generate_image(text, img_file_path)
+        # 计算融合图的特征向量
+        with Image.open(mixed_img_file_path) as mixed_image:
+            mixed_image_vector: ndarray = self.chineseClip.embed_image_to_vec(mixed_image)
+            mixed_image_vector_pg_str = "[" + ",".join([str(x) for x in mixed_image_vector]) + "]"
+        # 计算全部文本的特征向量，注意必须把tag_text放在前面防止被模型512token限制截断
         with Image.open(img_file_path) as image:
-            # 计算图片的特征向量
-            image_vector: ndarray = self.chineseClip.embed_image_to_vec(image)
             # 从图片中识别文字OCR
             ocr_texts = ",".join(self.ocrUtil.recognize(image))
-        # 计算全部文本的特征向量，注意必须把tag_text放在前面防止被模型512token限制截断
-        all_text = StringUtil.concat(text, ",", ocr_texts)
-
-        all_text_vector_multi_modal: ndarray = self.chineseClip.embed_text_to_vec(all_text)
-
-        alpha = 0.5
-        all_in_one_vector = alpha * image_vector + (1 - alpha) * all_text_vector_multi_modal
-        all_in_one_vector = all_in_one_vector / np.linalg.norm(all_in_one_vector)
-        all_in_one_vector_pg_str = "[" + ",".join([str(x) for x in all_in_one_vector]) + "]"
-
-        all_text_vector_text_info: ndarray = self.qwenEmbedding.embed_to_vector(all_text)
-        all_text_vector_text_info_pg_str = "[" + ",".join([str(x) for x in all_text_vector_text_info]) + "]"
+            # 计算特征向量
+            all_text = StringUtil.concat(text, ",", ocr_texts)
+            all_text_vector_text_info: ndarray = self.qwenEmbedding.embed_to_vector(all_text)
+            all_text_vector_text_info_pg_str = "[" + ",".join([str(x) for x in all_text_vector_text_info]) + "]"
 
         with self.Session() as session:
             img_vector_mapper = ImgVectorMapper(session)
             # 使用图文混合多模态特征向量进行检索
-            img_vector_do_list = img_vector_mapper.search_by_all_in_one_vector(all_in_one_vector_pg_str, cosine_similarity, img_count)
+            img_vector_do_list = img_vector_mapper.search(mixed_image_vector_pg_str, cosine_similarity, img_count)
             similar_img_model_multi_model_list = []
             for img_vector_do in img_vector_do_list:
                 similar_img_model = SimilarImgModel(img_vector_do.file_dir, img_vector_do.file_name, img_vector_do.cosine_distance,
@@ -139,4 +137,4 @@ class ImgSearchService:
                                                     img_vector_do.file_sha256)
                 similar_img_model_all_text_list.append(similar_img_model)
 
-            return similar_img_model_multi_model_list, similar_img_model_all_text_list
+            return similar_img_model_multi_model_list, similar_img_model_all_text_list, mixed_img_file_path

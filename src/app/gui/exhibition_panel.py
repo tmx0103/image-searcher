@@ -103,6 +103,7 @@ class ExhibitionPanel(QWidget):
             image_label.setPixmap(QPixmap(similar_img_model.fileRelativePath))
             image_label.setImagePath(similar_img_model.fileRelativePath)
             image_label.setFileSha256(similar_img_model.fileSha256)
+            image_label.setCosineSimilarity(1 - similar_img_model.cosineDistance)
             i += 1
             if i >= ExhibitionPanel.MAX_SIMILAR_IMG_COUNT:
                 break
@@ -116,6 +117,7 @@ class ExhibitionPanel(QWidget):
             image_label.setPixmap(QPixmap(similar_img_model.fileRelativePath))
             image_label.setImagePath(similar_img_model.fileRelativePath)
             image_label.setFileSha256(similar_img_model.fileSha256)
+            image_label.setCosineSimilarity(1 - similar_img_model.cosineDistance)
             i += 1
             if i >= ExhibitionPanel.MAX_SIMILAR_IMG_COUNT:
                 break

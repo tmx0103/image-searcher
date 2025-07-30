@@ -2,12 +2,15 @@
 Copyright © 2025-2025 tmx0103.
 Licensed under the Apache-2.0 License.
 For full terms, see the LICENSE file.
-dataset_preprocessing_load_db_all_text_vec.py
+run_update_all_text_vector.py
 """
 import logging.config
 import os
 
 from dotenv import load_dotenv
+
+load_dotenv()
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -16,35 +19,39 @@ from src.app.db.mapper.img_vector_mapper import ImgVectorMapper
 from src.app.log.logger import logger
 from src.app.utils import sha256_util
 
+LOGGING_CONFIG = {
+    "version": 1,
+    "formatters": {
+        "standard_formatter": {"format": "%(asctime)s [%(levelname)s] [%(threadName)s]-%(name)s %(module)s:%(lineno)d - %(message)s"}
+    },
+    "handlers": {
+        "file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": "logs/run_update_all_text_vector.log",
+            "maxBytes": 10 * 1024 * 1024,
+            "formatter": "standard_formatter",
+        },
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "standard_formatter",
+        }
+    },
+    "loggers": {
+        "standard_logger": {
+            "handlers": ["file", "console"],
+            "level": "DEBUG",
+            "propagate": False,
+        }
+    },
+    "root": {"handlers": ["file", "console"], "level": "DEBUG"}
+}
+
 if __name__ == "__main__":
-    LOGGING_CONFIG = {
-        "version": 1,
-        "formatters": {"standard_formatter": {"format": "%(asctime)s [%(levelname)s] %(module)s:%(lineno)d - %(message)s"}},
-        "handlers": {
-            "file": {
-                "class": "logging.handlers.RotatingFileHandler",
-                "filename": "../logs/dataset_preprocessing_load_db_all_text_vec.log",
-                "maxBytes": 10 * 1024 * 1024,
-                "formatter": "standard_formatter",
-            },
-            "console": {
-                "class": "logging.StreamHandler",
-                "formatter": "standard_formatter",
-            }
-        },
-        "loggers": {
-            "standard_logger": {
-                "handlers": ["file"], "level": "DEBUG",
-            }
-        },
-        "root": {"handlers": ["console"], "level": "DEBUG"}
-    }
-    log_dir = "../logs"
+    log_dir = "logs"
     os.makedirs(log_dir, exist_ok=True)
 
     logging.config.dictConfig(LOGGING_CONFIG)
-    # 载入数据库
-    load_dotenv()
+
     engine = create_engine(f"postgresql://"
                            f"{os.getenv('POSTGRESQL_USER')}:{os.getenv('POSTGRESQL_PASSWORD')}"
                            f"@{os.getenv('POSTGRESQL_HOST')}:{os.getenv('POSTGRESQL_PORT')}/{os.getenv('POSTGRESQL_DB')}")
@@ -52,7 +59,7 @@ if __name__ == "__main__":
     with (Session() as session):
         img_vector_mapper = ImgVectorMapper(session)
         qwen_embedding = QwenEmbedding()
-        for file_dir, dirs, file_names in os.walk(os.path.join("../resources", "dataset")):
+        for file_dir, dirs, file_names in os.walk(os.path.join("resources", "dataset")):
             for file_name in file_names:
                 file_relative_path = os.path.join(file_dir, file_name)
                 logger.info(f"处理：{file_relative_path}")
