@@ -100,8 +100,8 @@ class ExhibitionPanel(QWidget):
             row = i // ExhibitionPanel.SIMILAR_IMG_COLS
             col = i % ExhibitionPanel.SIMILAR_IMG_COLS
             image_label: ImageLabel = self.labelImageSearchResultMultiModelMatrix[row][col]
-            image_label.setPixmap(QPixmap(similar_img_model.fileRelativePath))
-            image_label.setImagePath(similar_img_model.fileRelativePath)
+            image_label.setPixmap(QPixmap(similar_img_model.filePath))
+            image_label.setImagePath(similar_img_model.filePath)
             image_label.setFileSha256(similar_img_model.fileSha256)
             image_label.setCosineSimilarity(1 - similar_img_model.cosineDistance)
             i += 1
@@ -114,8 +114,8 @@ class ExhibitionPanel(QWidget):
             row = i // ExhibitionPanel.SIMILAR_IMG_COLS
             col = i % ExhibitionPanel.SIMILAR_IMG_COLS
             image_label: ImageLabel = self.labelImageSearchResultTextInfoMatrix[row][col]
-            image_label.setPixmap(QPixmap(similar_img_model.fileRelativePath))
-            image_label.setImagePath(similar_img_model.fileRelativePath)
+            image_label.setPixmap(QPixmap(similar_img_model.filePath))
+            image_label.setImagePath(similar_img_model.filePath)
             image_label.setFileSha256(similar_img_model.fileSha256)
             image_label.setCosineSimilarity(1 - similar_img_model.cosineDistance)
             i += 1

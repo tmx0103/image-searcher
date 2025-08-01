@@ -10,6 +10,6 @@ from ...log.logger import logger
 
 Base = declarative_base()
 
-from .img_vector_do import ImgVectorDO
+from .image_info_do import ImageInfoDO
 
 logger.info("载入数据库模块...")

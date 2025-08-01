@@ -9,40 +9,41 @@ import os
 
 from dotenv import load_dotenv
 
-LOGGING_CONFIG = {
-    "version": 1,
-    "formatters": {
-        "standard_formatter": {"format": "%(asctime)s [%(levelname)s] [%(threadName)s]-%(name)s %(module)s:%(lineno)d - %(message)s"}
-    },
-    "handlers": {
-        "file": {
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": "logs/app.log",
-            "maxBytes": 10 * 1024 * 1024,
-            "formatter": "standard_formatter",
+load_dotenv()
+
+
+def init_log(log_dir: str, log_file_name: str):
+    os.makedirs(log_dir, exist_ok=True)
+    logging.config.dictConfig({
+        "version": 1,
+        "formatters": {
+            "standard_formatter": {"format": "%(asctime)s [%(levelname)s] [%(threadName)s]-%(name)s %(module)s:%(lineno)d - %(message)s"}
         },
-        "console": {
-            "class": "logging.StreamHandler",
-            "formatter": "standard_formatter",
-        }
-    },
-    "loggers": {
-        "standard_logger": {
-            "handlers": ["file", "console"],
-            "level": "DEBUG",
-            "propagate": False,
-        }
-    },
-    "root": {"handlers": ["file", "console"], "level": "DEBUG"}
-}
+        "handlers": {
+            "file": {
+                "class": "logging.handlers.RotatingFileHandler",
+                "filename": f"{log_dir}/{log_file_name}",
+                "maxBytes": 10 * 1024 * 1024,
+                "formatter": "standard_formatter",
+            },
+            "console": {
+                "class": "logging.StreamHandler",
+                "formatter": "standard_formatter",
+            }
+        },
+        "loggers": {
+            "standard_logger": {
+                "handlers": ["file", "console"],
+                "level": "INFO",
+                "propagate": False,
+            }
+        },
+        "root": {"handlers": ["file", "console"], "level": "DEBUG"}
+    })
+
 
 if __name__ == '__main__':
-    load_dotenv()
-    log_dir = "logs"
-    os.makedirs(log_dir, exist_ok=True)
-
-    logging.config.dictConfig(LOGGING_CONFIG)
-
+    init_log("logs", "app.log")
     try:
         from src.app import run
 
