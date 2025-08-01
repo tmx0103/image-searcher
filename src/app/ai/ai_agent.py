@@ -5,6 +5,7 @@ For full terms, see the LICENSE file.
 ai_agent.py
 """
 import base64
+import os
 import uuid
 
 from langchain.chat_models import init_chat_model
@@ -46,8 +47,8 @@ class AiAgent:
         # self.model = init_chat_model(model_provider="ollama", model="qwen3:8b")
 
         # 使用LM Studio
-        self.model = init_chat_model(model_provider="openai", model="google/gemma-3-12b", api_key="123",
-                                     base_url="http://localhost:1234/v1")
+        self.model = init_chat_model(model_provider="openai", model=os.getenv("LM_STUDIO_MODEL"), api_key="123",
+                                     base_url=os.getenv("LM_STUDIO_URL"))
         tool_search_by_text = StructuredTool.from_function(img_search_by_text_tool)
         tool_search_by_image_tool = StructuredTool.from_function(img_search_by_image_tool)
         tool_search_by_text_and_image_tool = StructuredTool.from_function(img_search_by_text_and_image_tool)
@@ -88,7 +89,3 @@ if __name__ == "__main__":
     for token in ai_agent.stream(question,
                                  image_path_list=['../../../resources/dataset/test/20180708-093848_92ff280b46d067fa.jpg']):
         print(token, end="")
-    # for token in ai_agent.stream("请使用测试打印工具，参数请填写AAA。如果没有测试打印工具就不要使用。"):
-    #     print(token, end="")
-    # for token in ai_agent.stream("请使用测试计算器工具，参数请填写AAA。如果没有计算器工具就不要使用。"):
-    #     print(token, end="")

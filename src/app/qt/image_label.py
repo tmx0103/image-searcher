@@ -4,7 +4,6 @@ Licensed under the Apache-2.0 License.
 For full terms, see the LICENSE file.  
 image_label.py
 """
-import os
 
 from PyQt5.QtCore import Qt, QMimeData, QByteArray, pyqtSignal
 from PyQt5.QtGui import QPixmap
@@ -39,7 +38,7 @@ class ImageLabel(QLabel):
 
     def setImagePath(self, image_path):
         self.imagePath = image_path
-        self.imageClipboardPath = "file:///" + os.path.abspath(image_path).replace('\\', '/')
+        self.imageClipboardPath = "file:///" + image_path.replace('\\', '/')
 
     def setFileSha256(self, file_sha256):
         self.fileSha256 = file_sha256

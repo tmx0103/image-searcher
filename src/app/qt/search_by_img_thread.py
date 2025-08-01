@@ -32,4 +32,4 @@ class SearchByImgThread(QThread):
             self.finished.emit()
         except Exception as e:
             logger.error(e, exc_info=True)
-            self.error.emit()
+            self.error.emit("模型执行异常")

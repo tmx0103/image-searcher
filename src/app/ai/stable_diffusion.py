@@ -19,7 +19,7 @@ from src.app.log.logger import logger
 class StableDiffusion:
     _instance = None
     _lock = Lock()
-    _url = "http://127.0.0.1:7860/sdapi/v1/img2img"
+    _url = os.getenv("SD_WEB_UI_URL")
 
     @classmethod
     def get_instance(cls):

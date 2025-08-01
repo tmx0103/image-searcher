@@ -155,6 +155,10 @@ class ControlPanel(QWidget):
         self.signalUpdateLabelImageSearchResultTextInfoMatrix.emit(similar_img_model_all_text_list)
         self.signalSwitchOverlay.emit(False)
 
+    def on_signal_search_error(self, error_message: str):
+        logger.error(error_message)
+        self.signalSwitchOverlay.emit(False)
+
     def on_signal_start_img_search_by_text(self, text: str):
         self.do_push_button_search_by_text(text)
 
@@ -187,6 +191,7 @@ class ControlPanel(QWidget):
         self.searchByTextThread = SearchByTextThread(text, cosine_similarity, ExhibitionPanel.MAX_SIMILAR_IMG_COUNT)
         self.searchByTextThread.finished.connect(
             lambda search_thread=self.searchByTextThread: self.on_signal_search_finished(search_thread))
+        self.searchByTextThread.error.connect(self.on_signal_search_error)
         self.searchByTextThread.start()
 
     def do_push_button_search_by_img(self):
@@ -199,6 +204,7 @@ class ControlPanel(QWidget):
         self.searchByImgThread = SearchByImgThread(label_image_to_search_list[0].imagePath, cosine_similarity,
                                                    ExhibitionPanel.MAX_SIMILAR_IMG_COUNT)
         self.searchByImgThread.finished.connect(lambda search_thread=self.searchByImgThread: self.on_signal_search_finished(search_thread))
+        self.searchByImgThread.error.connect(self.on_signal_search_error)
         self.searchByImgThread.start()
 
     def do_push_button_search_by_text_and_img(self, text: str):
@@ -212,6 +218,7 @@ class ControlPanel(QWidget):
         self.searchByTextAndImgThread.signal_mixed_img_generated.connect(self.on_signal_mixed_img_generated)
         self.searchByTextAndImgThread.finished.connect(
             lambda search_thread=self.searchByTextAndImgThread: self.on_signal_search_finished(search_thread))
+        self.searchByTextAndImgThread.error.connect(self.on_signal_search_error)
         self.searchByTextAndImgThread.start()
 
     def on_signal_mixed_img_generated(self, text, mixed_image_path):
@@ -224,6 +231,9 @@ class ControlPanel(QWidget):
         image = image.scaledToHeight(150)
         text_cursor.insertImage(image)
         text_cursor.insertText("\n==========\n")
+        # 滚动到底部
+        scrollbar = self.textEditLlmHistory.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
 
     def update_all_label_image_search_result_matrix(self, similar_img_model_multi_model_list, similar_img_model_all_text_list):
         self.signalClearImages.emit()
@@ -237,9 +247,6 @@ class ControlPanel(QWidget):
     def on_click_push_button_ask_or_stop_llm(self):
         if self.textEditLlmToSearch.toPlainText():
             ask_text = self.textEditLlmToSearch.toPlainText()
-            # 启用UI
-            self.pushButtonSearchByImage.setEnabled(False)
-            self.pushButtonSearchByText.setEnabled(False)
             # 读取文本框中的问题
             text_cursor: QTextCursor = self.textEditLlmHistory.textCursor()
             text_cursor.movePosition(QTextCursor.End)
@@ -256,6 +263,9 @@ class ControlPanel(QWidget):
                     text_cursor.insertImage(image)
                     text_cursor.insertText("\n")
             text_cursor.insertText("\n回答: ")
+            # 滚动到底部
+            scrollbar = self.textEditLlmHistory.verticalScrollBar()
+            scrollbar.setValue(scrollbar.maximum())
             # 创建工作线程处理模型调用
             self.llmThread = LlmThread(self.aiAgent, ask_text, image_path_list)
             self.llmThread.model_token_generated.connect(self.on_model_token_generated)
@@ -283,9 +293,5 @@ class ControlPanel(QWidget):
         self.end_model_answer()
 
     def end_model_answer(self):
-        # 启用UI
-        self.pushButtonSearchByImage.setEnabled(True)
-        self.pushButtonSearchByText.setEnabled(True)
-
         # 清理工作线程
         self.llmThread = None

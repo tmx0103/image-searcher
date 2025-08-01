@@ -27,10 +27,10 @@ class LlmThread(QThread):
             # 流式调用模型
             logger.info("开始调用模型...")
             for chunk in self.aiAgent.stream(self.prompt, self.imagePathList):
-                logger.debug("模型输出:%s", chunk)
+                logger.info("模型输出:%s", chunk)
                 self.model_token_generated.emit(chunk)  # 发送每个文本块
             self.finished.emit()
             logger.info("模型调用完成")
         except Exception as e:
-            self.error.emit(f"模型错误: {str(e)}")
-            logger.error(e)
+            logger.error(e, exc_info=True)
+            self.error.emit("模型执行异常")

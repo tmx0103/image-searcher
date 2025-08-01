@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import QWidget, QHBoxLayout, QSplitter, QVBoxLayout, QLineE
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.app.db.mapper.img_vector_mapper import ImgVectorMapper
+from src.app.db.mapper.image_info_mapper import ImageInfoMapper
 from src.app.gui.grid_widget_tag_list import GridWidgetTagList
 from src.app.log.logger import logger
 from src.app.qt.image_label import ImageLabel
@@ -70,8 +70,6 @@ class MarkingWindow(QWidget):
         self.scrollAreaMarking.setFixedHeight(600)
         self.scrollAreaMarking.setStyleSheet("QScrollArea {background-color: white;}")
         self.gridWidgetTagList = GridWidgetTagList()
-        # self.vBoxLayoutMarking = QVBoxLayout()
-        # self.gridWidgetTagList.setLayout(self.vBoxLayoutMarking)
         self.scrollAreaMarking.setWidget(self.gridWidgetTagList)
 
         # -左右布局：
@@ -115,18 +113,17 @@ class MarkingWindow(QWidget):
         tags = [line_edit_tag.text() for line_edit_tag in self.gridWidgetTagList.lineEditTagList]
         logger.info(f"保存标签：{",".join(tags)}")
         with self.Session() as session:
-            img_vector_mapper = ImgVectorMapper(session)
+            image_info_mapper = ImageInfoMapper(session)
             # 更新标签到数据库
-            img_vector_mapper.update_tag_text_by_file_sha256(self.fileSha256, ",".join(tags))
+            image_info_mapper.update_tag_text_by_file_path(self.filePath, ",".join(tags))
             # 更新向量到数据库
-            self.repo_vector_service.update_all_text_vector(self.fileSha256)
-            self.repo_vector_service.update_all_in_one_vector(self.fileSha256)
+            self.repo_vector_service.update_all_text_vector(self.filePath)
             logger.info(f"保存完成")
 
     def load_tags(self):
         with self.Session() as session:
-            img_vector_mapper = ImgVectorMapper(session)
-            tag_text = img_vector_mapper.query_by_file_sha256(self.fileSha256).tag_text
+            image_info_mapper = ImageInfoMapper(session)
+            tag_text = image_info_mapper.query_by_file_path(self.filePath).tag_text
             if tag_text is None:
                 return
             tag_list = tag_text.split(",")
