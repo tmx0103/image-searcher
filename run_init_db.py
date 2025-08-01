@@ -4,7 +4,7 @@ Licensed under the Apache-2.0 License.
 For full terms, see the LICENSE file.
 run_init_db.py
 第一次运行GUI应用前，【必须运行该脚本】。
-该脚本的作用是，将指定目录（包括子目录）的所有图片文件信息缓存到数据库中。
+该脚本的作用是，将指定目录（包括子目录）的所有图片文件基本信息载入数据库中。
 可选：
 【高危操作】清除数据库中所有数据
 """
@@ -102,5 +102,6 @@ def init_log(log_dir: str, log_file_name: str):
 
 if __name__ == "__main__":
     init_log("logs", "init_db.log")
-
-    InitDBUtil.init("resources/dataset", True)
+    paths = os.getenv("IMAGE_PATHS").split(",")
+    for path in paths:
+        InitDBUtil.init(path, True)

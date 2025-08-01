@@ -109,7 +109,7 @@ class ControlPanel(QWidget):
         self.pushButtonSearchByImage.setFixedHeight(30)
         self.pushButtonSearchByImage.clicked.connect(self.on_click_push_button_search_by_image)
         # --图文结合搜索
-        self.pushButtonSearchByTextAndImage = QPushButton("图文结合搜索")
+        self.pushButtonSearchByTextAndImage = QPushButton("图文融合搜索")
         self.pushButtonSearchByTextAndImage.setStyleSheet("font-size: 12pt;font-family: 微软雅黑;")
         self.pushButtonSearchByTextAndImage.setFixedHeight(30)
         self.pushButtonSearchByTextAndImage.clicked.connect(self.on_click_push_button_search_by_text_and_image)
