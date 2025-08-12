@@ -6,15 +6,18 @@
 注意：当前该项目需要您自行搭建环境，按照文档说明手动部署。
 
 <h1 id="i5WnE">使用示例</h1>
-以下示例中使用的图库基于https://github.com/LLM-Red-Team/emo-visual-data提供的数据集（仅图片文件，未录入打标数据）。
+以下示例中使用的图库基于 https://github.com/LLM-Red-Team/emo-visual-data 提供的数据集（仅图片文件，未录入打标数据）。
 
 <h2 id="p3pvQ">纯文本搜图</h2>
+
 ![画板](docs/imgs/截图-纯文本搜索.png)
 
 <h2 id="lGOf5">以图搜图</h2>
+
 ![画板](docs/imgs/截图-单图片搜索.png)
 
 <h2 id="P3Kwq">图文融合搜图</h2>
+
 ![画板](docs/imgs/截图-图文融合搜图.png)
 
 <h2 id="UfZqK">手工打标</h2>
