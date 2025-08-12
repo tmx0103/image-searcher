@@ -5,14 +5,37 @@
 
 注意：当前该项目需要您自行搭建环境，按照文档说明手动部署。
 
+<h1 id="i5WnE">使用示例</h1>
+以下示例中使用的图库基于https://github.com/LLM-Red-Team/emo-visual-data提供的数据集（仅图片文件，未录入打标数据）。
+
+<h2 id="p3pvQ">纯文本搜图</h2>
+![画板](docs/imgs/截图-纯文本搜索.png)
+
+<h2 id="lGOf5">以图搜图</h2>
+![画板](docs/imgs/截图-单图片搜索.png)
+
+<h2 id="P3Kwq">图文融合搜图</h2>
+![画板](docs/imgs/截图-图文融合搜图.png)
+
+<h2 id="UfZqK">手工打标</h2>
+打标前
+
+![画板](docs/imgs/截图-打标前.png)
+
+打标页面
+
+![画板](docs/imgs/截图-打标.png)
+
+打标后
+
+![画板](docs/imgs/截图-打标后.png)
+
 <h1 id="yEShf">基本原理</h1>
-
 <h2 id="kHKiY">纯文本搜图</h2>
-
 + **多模态检索**
-  - 通过多模态模型，将查询文本转换为可以直接于图片特征向量相比较的文本特征向量。该特征向量在向量数据库中与预先计算出的所有图片的特征向量进行相似度计算后，取出相似度最高的图片作为“多模态检索结果”。
+    - 通过多模态模型，将查询文本转换为可以直接于图片特征向量相比较的文本特征向量。该特征向量在向量数据库中与预先计算出的所有图片的特征向量进行相似度计算后，取出相似度最高的图片作为“多模态检索结果”。
 + **文本信息检索**
-  - 通过文本嵌入模型，将查询文本转换为文本特征向量。该特征向量在向量数据库中与所有图片对应的文本信息（OCR文本和人工打标的标签）特征向量进行相似度计算后，取出相似度最高的图片作为“文本信息检索结果”。
+    - 通过文本嵌入模型，将查询文本转换为文本特征向量。该特征向量在向量数据库中与所有图片对应的文本信息（OCR文本和人工打标的标签）特征向量进行相似度计算后，取出相似度最高的图片作为“文本信息检索结果”。
 
 ![画板](docs/imgs/纯文本搜图.jpg)
 
@@ -42,13 +65,13 @@
 该项目尚未提供一键部署包，因此需要您在使用前需要完成以下工作：
 
 + 硬件准备：
-  - 显存>=6GB的NVIDIA显卡，且为能够运行transformers库的架构。
-  - 内存>=32GB
+    - 单机需要内存>=48GB，且需要显存>=16GB的NVIDIA显卡，能够运行transformers库的架构。
+    - 项目使用的LM Studio、Stable Diffusion、PostgreSQL模块是通过http调用的，这三个模块可以部署到其他云上或者本地其他机器，以减少对单机的性能需求。
 + Postgresql数据库准备
-  - 在本地或云上部署Postgresql，且安装了pgvector插件；
-  - 根据.env-sample中的提示填写数据库相关信息，并更名为.env；
-  - 根据.env中POSTGRESQL_DB的配置（假设配置为aidb），在Postgresql中建立对应的数据库。建立schema=dev，table=tb_image_info，并为tb_image_info表启用pgvector插件；
-  - 建立表结构，并赋权：
+    - 在本地或云上部署Postgresql，且安装了pgvector插件；
+    - 根据.env-sample中的提示填写数据库相关信息，并更名为.env；
+    - 根据.env中POSTGRESQL_DB的配置（假设配置为aidb），在Postgresql中建立对应的数据库。建立schema=dev，table=tb_image_info，并为tb_image_info表启用pgvector插件；
+    - 建立表结构，并赋权：
 
 ```sql
 create table if not exists dev.tb_image_info
@@ -73,7 +96,7 @@ create index if not exists tb_image_info_file_sha256_index
   on dev.tb_image_info (file_sha256);
 
 alter table dev.tb_image_info
-  owner to aidbuser; --user1需要替换为.env中POSTGRESQL_USER的配置
+    owner to aidbuser; --aidbuser需要替换为.env中POSTGRESQL_USER的配置
 ```
 
 + AI模型/工具准备
