@@ -102,6 +102,6 @@ def init_log(log_dir: str, log_file_name: str):
 
 if __name__ == "__main__":
     init_log("logs", "init_db.log")
-    paths = os.getenv("IMAGE_PATHS").split(",")
+    paths = os.getenv("SCAN_PATHS").split(",")
     for path in paths:
         InitDBUtil.init(path, True)
